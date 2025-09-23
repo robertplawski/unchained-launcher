@@ -1,7 +1,7 @@
 import axios from "axios";
 import { type GameInfo, type LaunchRequest } from "./types";
 
-const API_URL = "http://localhost:8000"; // change if needed
+export const API_URL = "/api";
 
 export const fetchGames = async (): Promise<GameInfo[]> => {
   const res = await axios.get<GameInfo[]>(`${API_URL}/games`);

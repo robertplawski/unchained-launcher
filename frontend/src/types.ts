@@ -1,3 +1,15 @@
+export interface GameMetadata {
+  cover?: string;
+  big?: string;
+  screenshots?: string[];
+  artworks?: string[];
+  genres?: string[];
+  platforms?: string[];
+  first_release_date?: number;
+  summary?: string;
+  steam_id?: string;
+}
+
 export interface GameInfo {
   id: number;
   name: string;
@@ -5,17 +17,6 @@ export interface GameInfo {
   exes: string[];
   metadata?: GameMetadata;
 }
-export type GameMetadata = {
-  name?: string;
-  genres: string[];
-  platforms: string[];
-  first_release_date?: string;
-  summary?: string;
-  cover?: string | null;
-  big?: string | null;
-  screenshots: string[];
-  steam_id?: number | null;
-};
 
 export interface LaunchRequest {
   exe?: string;

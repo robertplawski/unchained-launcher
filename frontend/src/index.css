@@ -1,1 +1,4 @@
 @import "tailwindcss";
+html{
+  font-size:calc(1vmax + 1px);
+}

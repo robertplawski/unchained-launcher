@@ -74,104 +74,107 @@ def get_igdb_token():
 
 
 def fetch_game_metadata(game_name: str):
-    """
-    Fetch metadata from IGDB and save in ~/Games/metadata/<GameName>/:
-        - cover.jpg
-        - big.jpg
-        - screenshots/ (all screenshots from IGDB)
-        - metadata.json (includes genres, platforms, summary, release date)
-    """
     game_metadata_dir = METADATA_DIR / game_name
     screenshots_dir = game_metadata_dir / "screenshots"
+    artworks_dir = game_metadata_dir / "artworks"
+    logos_dir = game_metadata_dir / "logos"
     game_metadata_dir.mkdir(exist_ok=True)
     screenshots_dir.mkdir(exist_ok=True)
+    artworks_dir.mkdir(exist_ok=True)
+    logos_dir.mkdir(exist_ok=True)
 
     metadata_json_path = game_metadata_dir / "metadata.json"
     cover_path = game_metadata_dir / "cover.jpg"
     big_path = game_metadata_dir / "big.jpg"
 
-    # Skip if metadata already exists
+    # Skip if metadata exists
     if metadata_json_path.exists():
-
-        return json.load(open(metadata_json_path))#str(game_metadata_dir)
+        return json.load(open(metadata_json_path, encoding="utf-8"))
 
     token = get_igdb_token()
     headers = {
         "Client-ID": IGDB_CLIENT_ID,
         "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
     }
 
-    # Request cover, genres, platforms, summary, release date, screenshots
-    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url"
-    data = f'fields {fields}; search "{game_name}";'
+    # Escape quotes in game_name to prevent broken query
+    import re
+    safe_game_name = re.sub(r'"', '', game_name)
 
-    resp = requests.post(IGDB_URL, headers=headers, data=data)
+    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url"
+    query = f'search "{safe_game_name}"; fields {fields}; limit 1;'
 
-    # Retry if token expired
-    if resp.status_code == 401:
+    resp = requests.post(IGDB_URL, headers=headers, data=query)
+    if resp.status_code == 401:  # token expired
         token = get_igdb_token()
         headers["Authorization"] = f"Bearer {token}"
-        resp = requests.post(IGDB_URL, headers=headers, data=data)
+        resp = requests.post(IGDB_URL, headers=headers, data=query)
 
     if resp.status_code != 200:
-        print(f"[IGDB] Failed for {game_name}: {resp.status_code}")
+        print(f"[IGDB] Failed for {game_name}: {resp.status_code} {resp.text}")
         return None
 
     games = resp.json()
     if not games:
         return None
-
     game = games[0]
 
-# Save cover.jpg (large cover)
+    # ----- Cover -----
     cover_url = game.get("cover", {}).get("url")
     if cover_url:
         if cover_url.startswith("//"):
             cover_url = "https:" + cover_url
+        Image.open(BytesIO(requests.get(cover_url.replace("t_thumb", "t_cover_big")).content)).save(cover_path)
+        Image.open(BytesIO(requests.get(cover_url.replace("t_thumb", "t_720p")).content)).save(big_path)
 
-        # cover.jpg -> t_cover_big
-        cover_big_url = cover_url.replace("t_thumb", "t_cover_big")
-        img_data = requests.get(cover_big_url).content
-        Image.open(BytesIO(img_data)).save(cover_path)
-
-        # big.jpg -> t_720p (HD)
-        cover_hd_url = cover_url.replace("t_thumb", "t_720p")
-        img_data = requests.get(cover_hd_url).content
-        Image.open(BytesIO(img_data)).save(big_path)
-
-
-    # Ensure screenshots folder exists
-    screenshots_dir = game_metadata_dir / "screenshots"
-    screenshots_dir.mkdir(exist_ok=True)
-
-    screenshots = game.get("screenshots", [])
-    for idx, sc in enumerate(screenshots, start=1):
+    # ----- Screenshots -----
+    for idx, sc in enumerate(game.get("screenshots", []), start=1):
         sc_url = sc.get("url")
         if sc_url:
             if sc_url.startswith("//"):
                 sc_url = "https:" + sc_url
-            # Replace t_thumb with t_screenshot_huge for HD
             sc_hd_url = sc_url.replace("t_thumb", "t_screenshot_huge")
             try:
-                img_data = requests.get(sc_hd_url, timeout=10).content
-                Image.open(BytesIO(img_data)).save(screenshots_dir / f"{idx}.jpg")
+                Image.open(BytesIO(requests.get(sc_hd_url, timeout=10).content)).save(screenshots_dir / f"{idx}.jpg")
             except Exception as e:
                 print(f"[IGDB] Failed to download screenshot {idx} for {game_name}: {e}")
 
+    # ----- Artworks -----
+    for idx, art in enumerate(game.get("artworks", []), start=1):
+        art_url = art.get("url")
+        if art_url:
+            if art_url.startswith("//"):
+                art_url = "https:" + art_url
+            art_hd_url = art_url.replace("t_thumb", "t_1080p")
+            try:
+                Image.open(BytesIO(requests.get(art_hd_url, timeout=10).content)).save(artworks_dir / f"{idx}.jpg")
+            except Exception as e:
+                print(f"[IGDB] Failed to download artwork {idx} for {game_name}: {e}")
+
+    # ----- Logos -----
+    for idx, logo in enumerate(game.get("logos", []), start=1):
+        logo_url = logo.get("url")
+        if logo_url:
+            if logo_url.startswith("//"):
+                logo_url = "https:" + logo_url
+            logo_hd_url = logo_url.replace("t_thumb", "t_720p")
+            try:
+                Image.open(BytesIO(requests.get(logo_hd_url, timeout=10).content)).save(logos_dir / f"{idx}.png")
+            except Exception as e:
+                print(f"[IGDB] Failed to download logo {idx} for {game_name}: {e}")
+
+    # ----- Steam ID (optional) -----
     steam_id = None
     for site in game.get("websites", []):
-        if site.get("category") == 1:  # 1 = Steam
-            url = site.get("url")
-            if url:
-                # Extract numeric Steam ID from URL if possible
-                import re
-                match = re.search(r"/app/(\d+)", url)
-                if match:
-                    steam_id = match.group(1)
-                    break
+        if site.get("category") == 1:  # Steam
+            import re
+            match = re.search(r"/app/(\d+)", site.get("url", ""))
+            if match:
+                steam_id = match.group(1)
+                break
 
-
-    # Build metadata dictionary
+    # ----- Build metadata dict -----
     metadata_dict = {
         "name": game.get("name"),
         "genres": [g["name"] for g in game.get("genres", [])] if game.get("genres") else [],
@@ -179,19 +182,18 @@ def fetch_game_metadata(game_name: str):
         "first_release_date": game.get("first_release_date"),
         "summary": game.get("summary"),
         "cover": f"/metadata/{game_name}/cover.jpg" if cover_url else None,
-        "big": f"/metadata/{game_name}/big.jpg" if cover_url else None,  # <- ensure this exists
-        "screenshots": [f"/metadata/{game_name}/screenshots/{i+1}.jpg" for i in range(len(screenshots))] if screenshots else [],
+        "big": f"/metadata/{game_name}/big.jpg" if cover_url else None,
+        "screenshots": [f"/metadata/{game_name}/screenshots/{i+1}.jpg" for i in range(len(game.get("screenshots", [])))] if game.get("screenshots") else [],
+        "artworks": [f"/metadata/{game_name}/artworks/{i+1}.jpg" for i in range(len(game.get("artworks", [])))] if game.get("artworks") else [],
+        "logos": [f"/metadata/{game_name}/logos/{i+1}.png" for i in range(len(game.get("logos", [])))] if game.get("logos") else [],
         "steam_id": steam_id
     }
-
-
-
 
     with open(metadata_json_path, "w", encoding="utf-8") as f:
         json.dump(metadata_dict, f, indent=2)
 
-    print(f"[IGDB] Saved metadata for {game_name} in {game_metadata_dir}")
-    return metadata_dict 
+    print(f"[IGDB] Saved metadata (covers/screenshots/artworks/logos) for {game_name}")
+    return metadata_dict
 
 # -------------------- Game Scanner --------------------
 
@@ -208,7 +210,7 @@ def scan_games():
         if appid_path.is_file():
             appid = appid_path.read_text(encoding="utf-8").strip()
 
-        # Find .exe files
+        # Find .exe filesplatforms: Array(9) [ "Xbox Series X|S", "PlayStation 4", "Android", … ]
         exe_files = [f.name for f in dir_path.iterdir() if f.is_file() and f.suffix.lower() == ".exe"]
 
         if exe_files:
@@ -230,16 +232,17 @@ games_cache = scan_games()
 # -------------------- Models --------------------
 
 
+
 class GameMetadata(BaseModel):
     cover: Optional[str]
     big: Optional[str]
     screenshots: Optional[List[str]] = []
+    artworks: Optional[List[str]] = []
     genres: Optional[List[str]] = []
     platforms: Optional[List[str]] = []
     first_release_date: Optional[int]
     summary: Optional[str]
     steam_id: Optional[str]
-
 
 class GameInfo(BaseModel):
     id: int
@@ -251,12 +254,14 @@ class GameInfo(BaseModel):
 class LaunchRequest(BaseModel):
     exe: Optional[str] = None
 
+
+
 # -------------------- Endpoints --------------------
-@app.get("/games", response_model=List[GameInfo])
+@app.get("/api/games", response_model=List[GameInfo])
 def list_games():
     return games_cache
 
-@app.post("/games/{game_id}/launch")
+@app.post("/api/games/{game_id}/launch")
 def launch_game(game_id: int, req: Optional[LaunchRequest] = None):
     # Find game
     game = next((g for g in games_cache if g["id"] == game_id), None)
@@ -316,13 +321,13 @@ def launch_game(game_id: int, req: Optional[LaunchRequest] = None):
         "cover_image": game.get("cover_image")
     }
 
-@app.post("/refresh")
+@app.post("/api/refresh")
 def refresh_games():
     global games_cache
     games_cache = scan_games()
     return {"message": "Game list refreshed", "count": len(games_cache)}
 
-app.mount("/metadata", StaticFiles(directory=METADATA_DIR), name="metadata")
+app.mount("/api/metadata", StaticFiles(directory=METADATA_DIR), name="metadata")
 
 
 frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")

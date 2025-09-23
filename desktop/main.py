@@ -7,11 +7,12 @@ import atexit
 import webview
 import psutil
 import inputs  # pip install inputs
+import random
 
 # --- CONFIG ---
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.join(ROOT_DIR, "../backend")
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_URL = f"http://127.0.0.1:8000?nocache={random.randint(0,100000)}"
 
 uvicorn_process = None
 controller_running = True
@@ -42,7 +43,7 @@ def stop_backend():
 
 atexit.register(stop_backend)
 
-def wait_for_backend(url=BACKEND_URL, timeout=15):
+def wait_for_backend(url=BACKEND_URL, timeout=60):
     """Wait until the backend is ready, or timeout after `timeout` seconds."""
     import requests
     start_time = time.time()
@@ -90,14 +91,21 @@ def main():
     wait_for_backend()
     print("Backend is ready. Opening webview...")
 
+    os.environ["WEBKIT_DISABLE_COMPOSITING_MODE"] = "0"
+    os.environ["WEBKIT_USE_ACCELERATED_COMPOSITING"] = "1"
+
+# QT / QtWebEngine (if using qt backend)
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-gpu-rasterization --ignore-gpu-blacklist"
+
+
     # Create webview window
     window = webview.create_window("pytsapp", BACKEND_URL)
 
     # Start controller listener in background thread
-    threading.Thread(target=controller_listener, args=(window,), daemon=True).start()
+    #threading.Thread(target=controller_listener, args=(window,), daemon=True).start()
 
     # Start webview GUI
-    webview.start(gui='cef')  # Force CEF backend for Chromium DevTools
+    webview.start()  # Force CEF backend for Chromium DevTools
 
     # Stop controller listener when window closes
     controller_running = False
