@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@theme {
+  --default-transition-duration: 200ms;
+}
 html{
-  font-size:calc(1vmax + 1px);
+  font-size:calc(0.8vmax + 1px);
+}
+svg.lucide{
+  width: 1.25rem;
+  height: 1.25rem;
 }

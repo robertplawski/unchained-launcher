@@ -16,6 +16,7 @@ export interface GameInfo {
   appid?: string;
   exes: string[];
   metadata?: GameMetadata;
+  installed?: boolean;
 }
 
 export interface LaunchRequest {

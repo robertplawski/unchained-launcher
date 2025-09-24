@@ -1,15 +1,40 @@
 import React, { useMemo, useState } from "react";
 import { type GameInfo } from "../types";
 import { API_URL, launchGame } from "../api";
+import { LucideDownload, LucidePlay } from "lucide-react";
 
 interface Props {
   selected?: boolean;
   big?: boolean;
   game: GameInfo;
+  last?: boolean;
   onLaunched?: (msg: string) => void;
 }
 
-const GameCard: React.FC<Props> = ({ game, onLaunched, big, selected }) => {
+
+const GameStatusInfo = ({ game }: { game: GameInfo }) => {
+  return <p className="text-lg text-neutral-400 font-bold flex flex-row gap-4 items-center">
+
+    {!game.installed ? <LucidePlay fontSize={"0.5rem"} fill="#00FF00" color="#00FF00" /> : <LucideDownload />}
+
+    LAST TWO WEEKS: 12H
+
+  </p>
+}
+const GameBackgroundArtwork = ({ selected, last, artworkUrl }: { selected?: boolean, last?: boolean, artworkUrl?: string }) => {
+  return <img className={`-z-1 blur-sm h-full object-cover w-full absolute top-0 left-0 ${selected || last ? 'opacity-20' : 'opacity-0'}  transition-opacity`} src={artworkUrl} />
+}
+
+const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) => {
+  return <div className={`transition-[opacity,translate] duration-300 text-nowrap ${selected ? 'translate-y-0  transition-[translate,opacity] duration-300' : 'translate-y-6'}  absolute bottom-0 flex flex-col p-2 gap-2 ${selected ? 'opacity-100' : 'opacity-0'} `}>
+
+    <p className=" text-2xl font-bold">{game.name}</p>
+
+    <GameStatusInfo game={game} />
+  </div>
+}
+
+const GameCard: React.FC<Props> = ({ game, onLaunched, big, selected, last }) => {
   const [_launching, setLaunching] = useState(false);
 
 
@@ -29,34 +54,26 @@ const GameCard: React.FC<Props> = ({ game, onLaunched, big, selected }) => {
   const artworkUrl = useMemo(() => artworks?.length
     ? `${API_URL}${artworks[artworks.length - 1]}`
     : "", []);
+
   if (big) {
-
-    return <> <img className={`-z-1 blur-sm h-full object-cover w-full absolute top-0 left-0 ${selected ? 'opacity-20' : 'opacity-0'}  transition-opacity`}
-      src={artworkUrl} />
-      <div onClick={handleLaunch} className="relative flex flex-col pb-24 justify-between gap-0 min-h-90 min-w-194 w-194">
-        < img className={`min-h-90 w-194 object-contain transition-[scale,border]  z-10 ${selected ? 'scale-[1.05] border-4 border-white' : ''}`} src={API_URL + "/metadata/Dying Light The Beast/artworks/4.jpg"} />
-        < div className={`text-nowrap absolute bottom-0 flex flex-col p-2 gap-2 ${selected ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
-
-          <p className=" text-2xl font-bold">{game.name}</p>
-
-          <p className="text-xl text-neutral-400 font-bold">LAST TWO WEEKS: 12H</p>
-        </div>
+    return <>
+      <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
+      <div className="cursor-pointer relative flex flex-col pb-24 justify-between gap-0 min-h-90 min-w-194 w-194">
+        < img className={`min-h-90 w-194 object-contain transition-[scale,border]  z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`} src={API_URL + "/metadata/Dying Light The Beast/artworks/4.jpg"} />
+        <GameInfo {...{ game, selected }} />
       </div >
     </>
   }
 
 
-  return <> <img className={`-z-1 blur-sm h-full object-cover w-full absolute top-0 left-0 ${selected ? 'opacity-20' : 'opacity-0'} transition-opacity`}
-    src={artworkUrl} />
-    <div onClick={handleLaunch} className="relative flex flex-col pb-24 justify-between gap-0 min-h-90 min-w-60 w-60">
-      <img className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.05] border-4 border-white' : ''}`} src={API_URL + game.metadata?.big} />
-      <div className={`text-nowrap absolute bottom-0 flex flex-col p-2 gap-2 ${selected ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
+  return <>
+    <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
 
-        < p className=" text-2xl font-bold">{game.name}</p>
-
-        <p className="text-xl text-neutral-400 font-bold">LAST TWO WEEKS: 12H</p>
-      </div >
-    </div ></>
+    <div className="cursor-pointer relative flex flex-col pb-24 justify-between gap-0 min-h-90 min-w-60 w-60">
+      <img className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`} src={API_URL + game.metadata?.big} />
+      <GameInfo {...{ game, selected }} />
+    </div >
+  </>
 
 
 };
