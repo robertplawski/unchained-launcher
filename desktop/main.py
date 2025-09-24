@@ -99,7 +99,7 @@ def main():
 
 
     # Create webview window
-    window = webview.create_window("pytsapp", BACKEND_URL)
+    window = webview.create_window("Unchained Launcher", BACKEND_URL,frameless=True)
 
     # Start controller listener in background thread
     #threading.Thread(target=controller_listener, args=(window,), daemon=True).start()

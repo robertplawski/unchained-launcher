@@ -38,12 +38,12 @@ const GameList: React.FC = () => {
 
 
   const handleLaunch = async (index: number) => {
-    const game = games[index]
+    //const game = games[index]
     try {
       await launchGame(index);
-      alert(`Launched game ${game.name}`)
+      //alert(`Launched game ${game.name}`)
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to launch");
+      //alert(err.response?.data?.detail || "Failed to launch");
     } finally {
     }
   }
