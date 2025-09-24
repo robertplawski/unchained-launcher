@@ -198,6 +198,11 @@ def fetch_game_metadata(game_name: str):
     return metadata_dict
 
 # -------------------- Game Scanner --------------------
+def get_directory_size_mb(path):
+    """Get directory size in megabytes using pathlib"""
+    path = Path(path)
+    total_size = sum(f.stat().st_size for f in path.rglob('*') if f.is_file())
+    return total_size / (1024 * 1024)
 
 def scan_games():
     games = []
@@ -225,7 +230,8 @@ def scan_games():
                 "appid": appid,
                 "exes": exe_files,
                 "path": dir_path,
-                "metadata": metadata 
+                "metadata": metadata,
+                "size":get_directory_size_mb(dir_path)
             })
     return games
 
@@ -252,6 +258,7 @@ class GameInfo(BaseModel):
     appid: Optional[str]
     exes: List[str]
     metadata: Optional[GameMetadata]
+    size:float 
 
 class LaunchRequest(BaseModel):
     exe: Optional[str] = None

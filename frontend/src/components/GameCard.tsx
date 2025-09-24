@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { type GameInfo } from "../types";
-import { API_URL, launchGame } from "../api";
+import { API_URL } from "../api";
 import { LucideDownload, LucidePlay } from "lucide-react";
 
 interface Props {
@@ -8,16 +8,40 @@ interface Props {
   big?: boolean;
   game: GameInfo;
   last?: boolean;
-  onLaunched?: (msg: string) => void;
+}
+export function formatFileSize(mb: number): string {
+  if (mb < 1) {
+    // Convert to KB if less than 1 MB
+    const kb = mb * 1024;
+    if (kb < 1) {
+      // Convert to bytes if less than 1 KB
+      const bytes = kb * 1024;
+      return `${Math.round(bytes)} B`;
+    }
+    return `${Math.round(kb)} KB`;
+  }
+
+  if (mb < 1024) {
+    return `${mb.toFixed(1)} MB`;
+  }
+
+  // Convert to GB if 1024+ MB
+  const gb = mb / 1024;
+  if (gb < 1024) {
+    return `${gb.toFixed(1)} GB`;
+  }
+
+  // Convert to TB if 1024+ GB
+  const tb = gb / 1024;
+  return `${tb.toFixed(1)} TB`;
 }
 
-
 const GameStatusInfo = ({ game }: { game: GameInfo }) => {
-  return <p className="text-lg text-neutral-400 font-bold flex flex-row gap-4 items-center">
+  return <p className="text-lg text-neutral-400 flex flex-row gap-4 items-center">
 
     {!game.installed ? <LucidePlay fontSize={"0.5rem"} fill="#00FF00" color="#00FF00" /> : <LucideDownload />}
 
-    LAST TWO WEEKS: 12H
+    Size on disk {formatFileSize(game.size || 0)}
 
   </p>
 }
@@ -34,21 +58,10 @@ const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) =>
   </div>
 }
 
-const GameCard: React.FC<Props> = ({ game, onLaunched, big, selected, last }) => {
-  const [_launching, setLaunching] = useState(false);
+const GameCard: React.FC<Props> = ({ game, big, selected, last }) => {
 
 
-  const handleLaunch = async () => {
-    setLaunching(true);
-    try {
-      const res = await launchGame(game.id);
-      onLaunched?.(res.message);
-    } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to launch");
-    } finally {
-      setLaunching(false);
-    }
-  };
+
 
   const artworks = game.metadata?.artworks;
   const artworkUrl = useMemo(() => artworks?.length

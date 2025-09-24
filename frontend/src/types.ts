@@ -17,6 +17,7 @@ export interface GameInfo {
   exes: string[];
   metadata?: GameMetadata;
   installed?: boolean;
+  size?: number;
 }
 
 export interface LaunchRequest {

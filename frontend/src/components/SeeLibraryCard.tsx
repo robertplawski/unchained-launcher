@@ -1,4 +1,3 @@
-import { API_URL } from "../api";
 
 export default function SeeLibraryCard({ selected }: { selected: boolean }) {
   return <>

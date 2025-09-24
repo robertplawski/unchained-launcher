@@ -4,38 +4,58 @@ import { type GameInfo } from "../types";
 import GameCard from "./GameCard";
 import SeeLibraryCard from "./SeeLibraryCard";
 
+
 export function useArrowCounter(
   min: number = 0,
   max: number = 4,
   execute: (value: number) => void
 ) {
   const [value, setValue] = useState<number>(min);
+  const valueRef = useRef(value);
+
+  // Keep ref updated
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
+    const isEditable = (el: Element | null) => {
+      if (!el) return false;
+      const tag = el.tagName.toLowerCase();
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        (el as HTMLElement).isContentEditable
+      );
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditable(document.activeElement)) return; // ignore if typing
+
       if (e.key === "Enter") {
-        execute(value);
+        execute(valueRef.current);
       }
+
       setValue((prev) => {
-        if (e.key === "ArrowLeft") {
-          return Math.max(min, prev - 1);
-        } else if (e.key === "ArrowRight") {
-          return Math.min(max, prev + 1);
-        }
+        if (e.key === "ArrowLeft") return Math.max(min, prev - 1);
+        if (e.key === "ArrowRight") return Math.min(max, prev + 1);
         return prev;
       });
     };
 
     const handleWheel = (e: WheelEvent) => {
-      const threshold = 125; // adjust sensitivity
+      if (isEditable(document.activeElement)) return;
 
+      const threshold = 125;
 
-      if (e.deltaY < -threshold) {
-        setValue(prev => Math.min(max, prev + 1)); // scroll up
-      } else if (e.deltaY > threshold) {
-        setValue(prev => Math.max(min, prev - 1)); // scroll down
-      }
+      setValue((prev) => {
+        if (e.deltaY < -threshold) return Math.min(max, prev + 1);
+        if (e.deltaY > threshold) return Math.max(min, prev - 1);
+        return prev;
+      });
     };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("wheel", handleWheel);
 
@@ -43,7 +63,7 @@ export function useArrowCounter(
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("wheel", handleWheel);
     };
-  }, [min, max, execute, value]);
+  }, [min, max, execute]);
 
   return [value, setValue] as const;
 }
@@ -96,7 +116,7 @@ const GameList: React.FC = () => {
       return
     }
     gameRefs.current.forEach((ref) => {
-      ref?.addEventListener("click", () => setCurrentIndex(parseInt(ref.dataset.id)))
+      ref?.addEventListener("click", () => setCurrentIndex(parseInt(ref.dataset.id!)))
 
     })
   }, [games, setCurrentIndex])
@@ -138,7 +158,6 @@ const GameList: React.FC = () => {
               selected={currentIndex === index}
               game={game}
               last={currentIndex === index + 1 && index === games.length - 1}
-              onLaunched={(msg) => alert(msg)}
             />
           </div>
         ))}
