@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 #!/usr/bin/env python3
 import os
 import subprocess
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 from typing import List, Optional
 from pathlib import Path
@@ -303,8 +303,8 @@ def search_games(request: SearchRequest):
     # search already sorts by relevance internally
     query = (
         f'fields {fields}; '
-        f'search "{safe_query}"; '
-        f'where platforms = (6) & game_type = 0; '
+        #f'search "{safe_query}"; '
+        f'where name = "{safe_query}" & platforms = (6) & game_type = 0; '
             #f'sort rating desc; '
         f'limit {limit};'
     )
@@ -382,6 +382,7 @@ def search_games(request: SearchRequest):
         processed_games.append(processed_game)
         
     return {"games": processed_games, "count": len(processed_games)}
+
 
 app.mount("/api/metadata", StaticFiles(directory=METADATA_DIR), name="metadata")
 

@@ -1,8 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
 import GameCard from './GameCard';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import type { GameInfo } from '../types';
-import { fetchGames } from '../api';
+import { fetchGames, searchGames } from '../api';
 
 const categories = ["all", "installed", "library", "bay", "apps"]
 
@@ -21,12 +21,8 @@ function CategoryButton({
     onClick={onClick}
     className={`flex flex-row gap-2 p-3 px-6 ${selected ? 'bg-neutral-700' : ''} transition-[background] hover:bg-neutral-700/80 font-bold cursor-pointer uppercase rounded-full`}
   >
-    <span>
-      {name}
-    </span>
-    <span className='text-neutral-400'>
-      {count}
-    </span>
+    <span>{name}</span>
+    <span className='text-neutral-400'>{count}</span>
   </button>
 }
 
@@ -35,52 +31,134 @@ export default function SearchPage() {
   const query = searchParams.get('q') || '';
   const selectedCategory = searchParams.get('category') || 'all';
 
-  const handleCategorySelect = (category: string) => {
+  const handleCategorySelect = useCallback((category: string) => {
     setSearchParams({ q: query, category });
-  };
+  }, [query, setSearchParams]);
 
-  // make that into a hook
-  const [_loading, setLoading] = useState<boolean>(true);
-
+  const [loading, setLoading] = useState<boolean>(false);
   const [games, setGames] = useState<GameInfo[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  const loadGames = async () => {
+
+  const loadGames = useCallback(async () => {
+
     setLoading(true);
-    const data = await fetchGames();
-    setGames(data);
-    setLoading(false);
-  };
+    try {
+      console.log('Fetching games...'); // Debug log
+      const data = await fetchGames();
+      console.log('Games fetched:', data.length); // Debug log
 
-  useEffect(() => { loadGames() }, [query])
+      setGames(data);
+    } catch (error) {
+      console.error('Failed to load games:', error);
+      setGames([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  return <div>
-    <div className='p-4 flex flex-row justify-center items-center gap-2'>
-      {categories.map((category, index) => (
-        <CategoryButton
-          key={index}
-          name={category}
-          count={100}
-          selected={selectedCategory === category}
-          onClick={() => handleCategorySelect(category)}
-        />
-      ))}
-    </div>
-    <div className='p-4'>
+  const handleSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
 
-      <div className="flex flex-row gap-10 justify-around px-8 pb-16 w-[100vw] pl-0">
-        {games.map((game) => (
+    setIsSearching(true);
 
-          <div
-            key={game.id}
-            data-id={game.id}
+    try {
+      console.log('Searching for:', searchQuery); // Debug log
+      const results = await searchGames(searchQuery);
+      console.log('Search results:', results.length); // Debug log
 
-          >
-            <GameCard
-              game={game}
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (query) {
+      handleSearch(query);
+    } else {
+      loadGames();
+      setSearchResults([]);
+    }
+  }, [query, handleSearch, loadGames]);
+
+  // Only show loading when initially loading games (not when searching)
+  const showLoading = loading && !query;
+
+  const displayedGames = useMemo(() => query ? searchResults : games, [query, games, searchResults]);
+
+  return (
+
+    <div>
+      <div className='p-4'>
+        <div className='flex flex-row flex-wrap justify-center  items-center gap-2'>
+          {categories.map((category) => (
+            <CategoryButton
+              key={category}
+              name={category}
+              count={100}
+              selected={selectedCategory === category}
+              onClick={() => handleCategorySelect(category)}
             />
+          ))}
+        </div>
+      </div>
+
+      <div className='p-4'>
+        {showLoading ? (
+          <div className="text-center py-8">
+            <p className="text-neutral-400">Loading games...</p>
           </div>
-        ))}
+        ) : isSearching ? (
+          <div className="text-center py-8">
+            <p className="text-neutral-400">Searching...</p>
+          </div>
+        ) : (
+
+          <div className="flex flex-row gap-8 px-8 pb-16 flex-wrap justify-center pl-0">
+            {displayedGames.map((game: any, index: number) => (
+              <GameCard
+                hideGameInfo={true}
+                game={{
+                  id: game.id || index,
+                  name: game.name,
+                  appid: game.steam_id,
+                  exes: [],
+                  metadata: {
+                    cover: game.cover ? game.cover.replace('t_thumb', 't_720p') : undefined,
+                    big: game.cover ? game.cover.replace('t_thumb', 't_720p') : undefined,
+                    screenshots: game.screenshots?.map((s: string) => s?.replace('t_thumb', 't_screenshot_huge')) || [],
+                    artworks: game.artworks?.map((a: string) => a?.replace('t_thumb', 't_1080p')) || [],
+                    genres: game.genres || [],
+                    platforms: game.platforms || [],
+                    first_release_date: game.first_release_date,
+                    summary: game.summary,
+                    steam_id: game.steam_id
+                  },
+                  installed: false
+                }}
+              />
+            ))}
+
+          </div>
+        )}
+
+        {!showLoading && !isSearching && displayedGames.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-neutral-400">
+              {query ? 'No games found. Try a different search term.' : 'No games in your library.'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
-  </div>
+  );
 }

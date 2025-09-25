@@ -11,6 +11,7 @@ a = Analysis(
         ('backend', 'backend'),  # Include backend module
     ],
     hiddenimports=[
+        'pywebview',
         'webview',
         'webview.platforms.winforms',  # Add platform-specific imports
         'webview.platforms.gtk',

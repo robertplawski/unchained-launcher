@@ -8,6 +8,11 @@ export const fetchGames = async (): Promise<GameInfo[]> => {
   return res.data;
 };
 
+export const searchGames = async (query: string): Promise<any[]> => {
+  const res = await axios.post(`${API_URL}/search`, { query });
+  return res.data.games;
+};
+
 export const launchGame = async (gameId: number, exe?: string) => {
   const data: LaunchRequest = exe ? { exe } : {};
   const res = await axios.post(`${API_URL}/games/${gameId}/launch`, data);

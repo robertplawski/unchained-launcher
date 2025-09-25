@@ -65,7 +65,10 @@ export default function Header() {
 
   // Handle input changes to update the state
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value
     setInputValue(e.target.value);
+
+    navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
 

@@ -8,6 +8,7 @@ interface Props {
   big?: boolean;
   game: GameInfo;
   last?: boolean;
+  hideGameInfo?: boolean;
 }
 export function formatFileSize(mb: number): string {
   if (mb < 1) {
@@ -59,22 +60,41 @@ const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) =>
   </div>
 }
 
-const GameCard: React.FC<Props> = ({ game, big, selected, last }) => {
+const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) => {
 
 
 
 
   const artworks = game.metadata?.artworks;
-  const artworkUrl = useMemo(() => artworks?.length
-    ? `${API_URL}${artworks[artworks.length - 1]}`
-    : "", []);
+  const artworkUrl = useMemo(() => {
+    if (artworks?.length) {
+      // If it's a search result, the URL might already be complete
+      const url = artworks[artworks.length - 1];
+      return url.startsWith('http') ? url : `${API_URL}${url}`;
+    }
+    // Fallback to big image if no artworks
+    const bigImage = game.metadata?.big;
+    if (bigImage) {
+      return bigImage.startsWith('http') ? bigImage : `${API_URL}${bigImage}`;
+    }
+    return "";
+  }, [artworks, game.metadata?.big]);
+
+  // Determine the main image URL
+  const mainImageUrl = useMemo(() => {
+    const bigImage = game.metadata?.big;
+    if (bigImage) {
+      return bigImage.startsWith('http') ? bigImage : `${API_URL}${bigImage}`;
+    }
+    return artworkUrl;
+  }, [game.metadata?.big, artworkUrl]);
 
   if (big) {
     return <>
       <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
-      <div className="cursor-pointer relative flex flex-col pb-24 justify-between gap-0 min-h-90 min-w-194 w-194">
+      <div className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-194 w-194 ${!hideGameInfo ? 'pb-24' : ''}`}>
         < img className={`min-h-90 w-194 object-contain transition-[scale,border]  z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`} src={artworkUrl} />
-        <GameInfo {...{ game, selected }} />
+        {!hideGameInfo && <GameInfo {...{ game, selected }} />}
       </div >
     </>
   }
@@ -83,9 +103,9 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last }) => {
   return <>
     <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
 
-    <div className="cursor-pointer relative flex flex-col pb-24 justify-between gap-0 min-h-90 min-w-60 w-60">
-      <img className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`} src={API_URL + game.metadata?.big} />
-      <GameInfo {...{ game, selected }} />
+    <div className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-60 w-60 ${!hideGameInfo ? 'pb-24' : ''}`} >
+      < img className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`} src={mainImageUrl} />
+      {!hideGameInfo && <GameInfo {...{ game, selected }} />}
     </div >
   </>
 
