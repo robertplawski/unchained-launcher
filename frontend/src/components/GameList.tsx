@@ -21,6 +21,7 @@ export function useArrowCounter(
 
   useEffect(() => {
     const isEditable = (element: Element | null) => {
+      console.log(element)
       if (!element) return false;
 
       // Check if it's a form element that can receive input
@@ -40,11 +41,15 @@ export function useArrowCounter(
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isEditable(document.activeElement)) return; // ignore if typing
+      const targetElement = e.target as Element;
 
-      /*if (e.key === "Enter") {
+      if (isEditable(targetElement)) {
+        return; // ignore if typing
+      }
+
+      if (e.key === "Enter") {
         execute(valueRef.current);
-      }*/
+      }
 
       setValue((prev) => {
         if (e.key === "ArrowLeft") return Math.max(min, prev - 1);
