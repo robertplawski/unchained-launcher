@@ -61,7 +61,7 @@ export function useArrowCounter(
     const handleWheel = (e: WheelEvent) => {
       if (isEditable(document.activeElement)) return;
 
-      const threshold = 100;
+      const threshold = 10;
 
       setValue((prev) => {
         if (e.deltaY < -threshold) return Math.min(max, prev + 1);
@@ -126,11 +126,14 @@ const GameList: React.FC = () => {
 
   const navigate = useNavigate();
   const handleLaunch = async (index: number) => {
+
     if (index === games.length) {
       // "View more in your library" card is selected
       navigate("/search");
     } else {
-      navigate("/game/" + games[index].name)
+      const game = games[index]
+      const goodid = game.category == "library" ? (game.metadata?.id || 4) : game.id
+      navigate("/game/" + goodid)
     }
   };
   // scroll to the currently selected game whenever index changes

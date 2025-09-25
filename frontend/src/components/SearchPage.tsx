@@ -176,7 +176,7 @@ export default function SearchPage() {
     Math.max(0, displayedGames.length - 1),
     (v: number) => {
       if (v === displayedGames.length) {
-        // "View more in your library" card is selected
+        // "View more in your lirary" card is selected
         handleSeeLibrary();
       } else {
         handleLaunch(v);
@@ -208,10 +208,10 @@ export default function SearchPage() {
     if (index === displayedGames.length) {
       // "View more in your library" card is selected
       navigate("/search");
-    } else if (displayedGames[index]) {
-      const game = displayedGames[index];
-      const gameName = game.name || `game-${game.id}`;
-      navigate("/game/" + encodeURIComponent(gameName));
+    } else {
+      const game = displayedGames[index]
+      const goodid = game.category == "library" ? (game.metadata?.id || 4) : game.id
+      navigate("/game/" + goodid)
     }
   };
 

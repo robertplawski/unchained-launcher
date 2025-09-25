@@ -46,7 +46,7 @@ const GamePage: React.FC = () => {
   const installed = game.category == "library"
 
   const artworks = installed ? game.metadata?.artworks : game.artworks
-  const artwork = (installed ? API_URL : "") + artworks?.[artworks?.length || 1 - 1]
+  const artwork = (installed ? API_URL : "") + artworks?.[artworks?.length - 1]
 
   return (
     <>

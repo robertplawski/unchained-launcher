@@ -69,27 +69,69 @@ def get_igdb_token():
             raise RuntimeError(f"Failed to get IGDB token: {resp.status_code} {resp.text}")
     return IGDB_TOKEN
 
+def upgrade_igdb_image_resolution(url):
+    """
+    Upgrade IGDB image URL to higher resolution.
+    IGDB uses the following size patterns:
+    - t_thumb: Thumbnail (100x100)
+    - t_small: Small (300x400) 
+    - t_med: Medium (500x700)
+    - t_720p: 720p (1280x720)
+    - t_1080p: 1080p (1920x1080)
+    - t_original: Original size
+    """
+    if not url:
+        return url
+    
+    # Replace lower resolution sizes with higher ones
+    # Prefer 1080p, fall back to 720p, then original
+    upgrades = [
+        ('t_thumb', 't_1080p'),
+        ('t_small', 't_1080p'), 
+        ('t_med', 't_1080p'),
+        ('t_720p', 't_1080p'),
+        ('t_1080p', 't_original')  # If already 1080p, try original
+    ]
+    
+    for old_size, new_size in upgrades:
+        if old_size in url:
+            new_url = url.replace(old_size, new_size)
+            # Verify the new URL works by checking if it contains the new size identifier
+            if new_size in new_url:
+                return new_url
+    
+    return url
+
 def process_game_metadata(game_data):
     """Process a single game's metadata from IGDB response"""
-    # Process cover URL
+    # Process cover URL with higher resolution
     cover_url = game_data.get("cover", {}).get("url")
     if cover_url and cover_url.startswith("//"):
         cover_url = "https:" + cover_url
+    # Upgrade cover resolution to 720p or 1080p
+    if cover_url:
+        cover_url = upgrade_igdb_image_resolution(cover_url)
         
-    # Process screenshots
+    # Process screenshots with higher resolution
     screenshots = []
     for sc in game_data.get("screenshots", []):
         sc_url = sc.get("url")
         if sc_url and sc_url.startswith("//"):
             sc_url = "https:" + sc_url
+        # Upgrade screenshot resolution
+        if sc_url:
+            sc_url = upgrade_igdb_image_resolution(sc_url)
         screenshots.append(sc_url)
         
-    # Process artworks
+    # Process artworks with higher resolution
     artworks = []
     for art in game_data.get("artworks", []):
         art_url = art.get("url")
         if art_url and art_url.startswith("//"):
             art_url = "https:" + art_url
+        # Upgrade artwork resolution
+        if art_url:
+            art_url = upgrade_igdb_image_resolution(art_url)
         artworks.append(art_url)
         
     # Process Steam ID
@@ -503,6 +545,10 @@ def remove_duplicates(games_list):
 @app.get("/api/game/igdb/{game_id}")
 def get_igdb_game_metadata(game_id: int):
     """Get detailed metadata for a specific game by IGDB ID"""
+    for g in games_cache:
+        if g['metadata']['id'] == game_id:
+            return g
+    
     token = get_igdb_token()
     headers = {
         "Client-ID": IGDB_CLIENT_ID,
@@ -510,7 +556,7 @@ def get_igdb_game_metadata(game_id: int):
         "Accept": "application/json"
     }
     
-    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating,storyline,category,game_modes.name"
+    fields = "id,name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating,storyline,category,game_modes.name"
     query = f'fields {fields}; where id = {game_id};'
     
     resp = requests.post(IGDB_URL, headers=headers, data=query)
@@ -526,8 +572,13 @@ def get_igdb_game_metadata(game_id: int):
     if not games:
         raise HTTPException(status_code=404, detail="Game not found")
     
+
     game = games[0]
+  
+            #game['installed'] = True
+
     return process_game_metadata(game)
+
 
 
 @app.post("/api/search")
@@ -537,7 +588,8 @@ def search_games(request: SearchRequest):
 
     if not query:
         # TODO
-        games = scan_games()
+        games = games_cache
+        print(games)
         library_results = {"games":games,"count":len(games)}
         all_results = [
             {"category": "library", "results": library_results},
