@@ -68,16 +68,15 @@ const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
       currentParams.delete('q');
     }
     
-    // Build new URL with updated parameters
+    // Build new URL with updated parameters - go to /search/q
     const newSearch = currentParams.toString();
-    const newPath = `${currentUrl.pathname}${newSearch ? '?' + newSearch : ''}`;
-    
+    const newPath = `/search${newSearch ? '?' + newSearch : ''}`;
     navigate(newPath);
     
     // Optional: blur input after search
     inputRef.current?.blur();
   }
-};
+}
 
   // Handle input changes to update the state
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -8,7 +8,7 @@ export default function MainLayout() {
         <Header />
         <Outlet />
       </div>
-      <div className="text-white bg-black absolute bottom-0 items-center p-4 font-bold px-12  text-xl flex justify-between flex-row  w-full">
+      <div className="text-white bg-black fixed bottom-0 items-center p-4 font-bold px-12  text-xl flex justify-between flex-row  w-full">
         <p>Menu</p>
         <p>Back</p>
       </div>

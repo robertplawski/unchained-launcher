@@ -59,7 +59,7 @@ const GameBackgroundArtwork = ({ selected, last, artworkUrl }: { selected?: bool
 }
 
 const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) => {
-  return <div className={`transition-[opacity,translate] duration-300 text-nowrap ${selected ? 'translate-y-0 transition-[translate,opacity] duration-300' : 'translate-y-6'} absolute bottom-0 flex flex-col p-2 gap-2 ${selected ? 'opacity-100' : 'opacity-0'}`}>
+  return <div className={` absolute -bottom-28 transition-[opacity,translate] duration-300 text-nowrap ${selected ? 'translate-y-0 transition-[translate,opacity] duration-300' : 'translate-y-6'} flex flex-col p-2 gap-2 ${selected ? 'opacity-100' : 'opacity-0'}`}>
     <p className="text-2xl font-bold">{game.name}</p>
     <GameStatusInfo game={game} />
   </div>
@@ -126,22 +126,20 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo, hi
   const navigate = useNavigate();
 
   const openGamePage = useCallback(() => {
-    navigate("/game/" + game.name)
+    navigate(`/${game.category}/` + game.name)
   }, [game])
 
   if (big) {
     return <>
       {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
-      <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-194 w-194 ${!hideGameInfo ? 'pb-24' : ''}`}>
+      <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 h-80 aspect-[1920/879]`}>
         <LazyLoadImage
 
           loading="lazy"
           effect="blur"
           src={cachedArtworkImageUrl}
           placeholderSrc={cachedLowResArtworkImageUrl}
-          className={`min-h-90 w-194 object-contain transition-[scale,border] z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`}
-          width="100%"
-          height="auto"
+          className={`h-80 aspect-auto object-contain transition-[scale,border] z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`}
         />
 
         {!hideGameInfo && <GameInfo {...{ game, selected }} />}
@@ -151,19 +149,19 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo, hi
 
   return <>
     {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
-    <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-60 w-60 ${!hideGameInfo ? 'pb-24' : ''}`}>
+    <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-80 min-w-60 w-60 `}>
       <LazyLoadImage
         loading="lazy"
         effect="blur"
         src={cachedMainImageUrl}
         placeholderSrc={cachedLowResImageUrl}
-        className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`}
-        width="100%"
-        height="auto"
+        className={`min-h-80 object-contain flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`}
+
+
       />
       <img
         src={cachedLowResImageUrl}
-        className={`absolute min-h-90 scale-[1.05] h-90 flex-1 transition-[scale,border,opacity] blur-lg ${selected ? 'opacity-80' : 'opacity-0'}  -z-10 `}
+        className={`absolute object-contain min-h-80 scale-[1.05] h-90 flex-1 transition-[scale,border,opacity] blur-lg ${selected ? 'opacity-80' : 'opacity-0'}  -z-10 `}
         width="100%"
         height="auto"
       />

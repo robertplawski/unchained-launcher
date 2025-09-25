@@ -1,5 +1,5 @@
 import axios from "axios";
-import { type GameInfo, type LaunchRequest } from "./types";
+import { type AllSearchGamesType, type GameInfo, type LaunchRequest } from "./types";
 
 export const API_URL = "/api";
 
@@ -8,7 +8,7 @@ export const fetchGames = async (): Promise<GameInfo[]> => {
   return res.data;
 };
 
-export const searchGames = async (query: string, category: string = "all"): Promise<any[] | { games: any[]; count: number; message?: string }> => {
+export const searchGames = async (query: string, category: string = "all"): Promise<AllSearchGamesType> => {
   const res = await axios.post(`${API_URL}/search`, { query, category });
   // Return the entire response data so we can check for messages
   return res.data;

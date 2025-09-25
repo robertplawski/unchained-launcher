@@ -116,8 +116,8 @@ def process_game_metadata(game_data):
         "steam_id": steam_id
     }
 
-def search_installed_games(query: str, limit: int):
-    """Search for installed games based on the query"""
+def search_library_games(query: str, limit: int):
+    """Search for library games based on the query"""
     matching_games = []
     query_lower = query.lower()
     for game in games_cache:
@@ -146,9 +146,11 @@ def search_igdb_games(query: str, limit: int):
     # filter for pc games only (platform id 6 = pc) and main games only (category 0 = main game)
     query_igdb = (
         f'fields {fields}; '
-        f'search "{safe_query}"; '
-        f'where platforms = (6) & version_parent = null & game_type = 0; '
-        f'limit {limit};'
+        f'search "{safe_query}*"; '
+        # remember to change these platforms in order to support emulation
+        f'where platforms = (6) &  game_type = (0,4,8,9,10,11,12); '
+
+        f'limit 100;'
     )
 
     resp = requests.post(IGDB_URL, headers=headers, data=query_igdb)
@@ -163,6 +165,7 @@ def search_igdb_games(query: str, limit: int):
     import difflib
     games = resp.json()
     games = [g for g in games if 'rating' in g and g['rating'] is not None]
+   
     games = sorted(
         games,
         key=lambda g: difflib.SequenceMatcher(None, g.get('name', ''), safe_query).ratio(),
@@ -334,6 +337,7 @@ def scan_games():
                 "appid": appid,
                 "exes": exe_files,
                 "path": dir_path,
+                "category":"library",
                 "metadata": metadata,
                 "size":get_directory_size_mb(dir_path)
             })
@@ -342,6 +346,7 @@ def scan_games():
 games_cache = scan_games()
 
 # -------------------- Models --------------------
+from typing import Literal
 
 class GameMetadata(BaseModel):
     cover: Optional[str]
@@ -360,6 +365,7 @@ class GameInfo(BaseModel):
     appid: Optional[str]
     exes: List[str]
     metadata: Optional[GameMetadata]
+    category: Literal["library", "peers", "bay","apps"] 
     size:float 
 
 class LaunchRequest(BaseModel):
@@ -367,7 +373,7 @@ class LaunchRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
-    category: Optional[str] = "all"  # all, installed, bay, apps
+    category: Optional[str] = "all"  # all, library, bay, apps
     limit: Optional[int] = 10
 
 # -------------------- Endpoints --------------------
@@ -382,75 +388,145 @@ def refresh_games():
     games_cache = scan_games()
     return {"message": "Game list refreshed", "count": len(games_cache)}
 
+import requests
+from typing import Dict, Any
+
+def search_flatpak_apps(query: str, limit: int) -> Dict[str, Any]:
+    """Search for Flatpak apps using Flathub API"""
+    try:
+        # Use Flathub API to search for apps - based on the OpenAPI spec
+        search_url = "https://flathub.org/api/v2/search"
+        
+        # The API expects POST request with JSON body based on the schema
+        payload = {
+            "query": query or "",
+            "size": limit
+        }
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        
+        response = requests.post(search_url, json=payload, headers=headers)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        apps = []
+        # Process the data based on the MeilisearchResponse schema from the API spec
+        hits = data.get('hits', [])
+        for item in hits[:limit]:
+            # Create metadata based on the GameMetadata schema
+            metadata = {
+                "cover": item.get('icon'),
+                "big": item.get('icon'),  # Use icon as both cover and big
+                "screenshots": [],  # Flathub API doesn't provide screenshots in search
+                "artworks": [],  # Flathub API doesn't provide artworks in search
+                "genres": item.get('categories', []),
+                "platforms": ["Linux"],  # Flatpak apps are primarily for Linux
+                "first_release_date": item.get('added_at'),
+                "summary": item.get('summary'),
+                "steam_id": None  # Not applicable for Flatpak apps
+            }
+            
+            app = {
+                'id': item.get('id'),
+                'name': item.get('name'),
+                'appid': item.get('app_id'),
+                'exes': [],  # Flatpak apps don't have traditional EXEs
+                'metadata': metadata,
+                'size': 0.0  # Size not available from search API
+            }
+            apps.append(app)
+        
+        return {
+            "games": apps,
+            "count": len(apps)
+        }
+    except requests.RequestException as e:
+        print(f"Error searching Flatpak apps via API: {e}")
+        return {"games": [], "count": 0}
+    except Exception as e:
+        print(f"Unexpected error searching Flatpak apps: {e}")
+        return {"games": [], "count": 0}
+
+def remove_duplicates(games_list):
+    """Remove duplicate games from a list based on name and metadata name"""
+    seen_names = set()
+    unique_games = []
+    
+    for game in games_list:
+        # Determine the game's name for comparison
+        game_name = game.get('name') or (game.get('metadata', {}) or {}).get('name', '')
+        
+        # Normalize the name for comparison (lowercase, stripped)
+        normalized_name = game_name.lower().strip()
+        
+        # Only add if we haven't seen this name before
+        if normalized_name not in seen_names:
+            seen_names.add(normalized_name)
+            unique_games.append(game)
+    
+    return unique_games
+
 @app.post("/api/search")
 def search_games(request: SearchRequest):
     """Search for games based on category"""
     category = request.category or "all"
-    limit = min(request.limit or 10, 50)  # Default to 10 if None, max 50
+    limit = min(request.limit or 50, 50)  # Default to 10 if None, max 50
     
-    if category == "installed":
-        return search_installed_games(request.query, limit)
+    if category == "library":
+        result = search_library_games(request.query, limit)
+        result["games"] = remove_duplicates(result["games"])
+        return result
     elif category == "apps":
-        # For Flatpak apps, we would need to implement Flatpak search
-        # This is a placeholder implementation that returns empty results
-        return {"games": [], "count": 0, "message": "Flatpak search not yet implemented"}
+        result = search_flatpak_apps(request.query, limit)
+        result["games"] = remove_duplicates(result["games"])
+        return result
     elif category == "bay":
-        return search_igdb_games(request.query, limit)
+        result = search_igdb_games(request.query, limit)
+        result["games"] = remove_duplicates(result["games"])
+        return result
     elif category == "all":
         # Search all categories and return combined results with counts
-        installed_results = search_installed_games(request.query, limit)
+        library_results = search_library_games(request.query, limit)
         igdb_results = search_igdb_games(request.query, limit)
-        apps_results = {"games": [], "count": 0}
-        peers_results = {"games": [], "count": 0}
+        apps_results = search_flatpak_apps(request.query, limit)
+        peers_results = {"games": [], "count": 0}  # Placeholder
 
-        all_results = [installed_results, igdb_results, apps_results, peers_results]
+        # Combine all results
+        all_results = [
+            {"category": "library", "results": library_results},
+            {"category": "bay", "results": igdb_results},
+            #{"category": "apps", "results": apps_results},
+            {"category": "peers", "results": peers_results}
+        ]
 
-        merged_games = []
-        total_count = 0
-
+        # Collect all games from all categories
+        all_games = []
         for result in all_results:
-            merged_games.extend(result["games"])
-            total_count += result["count"]
-
-        final_result = {"games": merged_games, "count": total_count}
-
-        def get_game_name(game):
-            # First try to get name from metadata
-            metadata = game.get('metadata')
-            if metadata and isinstance(metadata, dict):
-                name = metadata.get('name')
-                if name:
-                    return name
-            # Fallback to direct name field
-            return game.get('name')
-
-        # Join all games arrays into one
-        merged_games = []
-        seen_names = set()
-        all = []
+            all_games.extend(result["results"]["games"])
         
-        for result in all_results:
-            for game in result["games"]:
-                # Use the 'name' field as the identifier to check for duplicates
-                print(game)
-                game_name = get_game_name(game) # or game['name'] if you're sure it exists
-                if game_name not in seen_names:
-                    merged_games.append(game)
-                    seen_names.add(game_name)
-
-        final_result = {"games": merged_games, "count": len(merged_games)}
-
+        # Remove duplicates from the combined list
+        unique_games = remove_duplicates(all_games)
+        
+        # Create the final result
+        final_result = {"games": unique_games, "count": len(unique_games)}
 
         return {
-            "installed": installed_results,
-            "peers":peers_results,
-            "bay": igdb_results,
-            "apps": apps_results,
-            "all":final_result}
+            "library": {"games": remove_duplicates(library_results["games"]), "count": len(remove_duplicates(library_results["games"]))},
+            "peers": peers_results,
+            "bay": {"games": remove_duplicates(igdb_results["games"]), "count": len(remove_duplicates(igdb_results["games"]))},
+            "apps": {"games": remove_duplicates(apps_results["games"]), "count": len(remove_duplicates(apps_results["games"]))},
+            "all": final_result
+        }
 
     else:
         # Default to IGDB search for any other category
-        return {"games": [], "count": 0, "message": f"Unknown category: {category}"}
+        result = {"games": [], "count": 0, "message": f"Unknown category: {category}"}
+        result["games"] = remove_duplicates(result["games"])
+        return result
 
 app.mount("/api/metadata", StaticFiles(directory=METADATA_DIR), name="metadata")
 
@@ -467,4 +543,3 @@ async def serve_react_app(full_path: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
