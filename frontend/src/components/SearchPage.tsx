@@ -3,6 +3,7 @@ import GameCard from './GameCard';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { AllSearchGamesType, GameInfo, SearchResultCategory } from '../types';
 import { fetchGames, searchGames } from '../api';
+import { Loader2 } from 'lucide-react';
 
 const categories: SearchResultCategory[] = ["all", "library", "bay", "peers", "apps"];
 
@@ -262,9 +263,9 @@ export default function SearchPage() {
         </div>
 
         <div className='p-4 pb-24 '>
-          {showLoading ? (
-            <div className="text-center py-8">
-              <p className="text-neutral-400">Loading games...</p>
+          {showLoading || _isSearching ? (
+            <div className="text-center py-8 w-full justify-center flex">
+              <Loader2 className='animate-spin ' />
             </div>
           ) : displayedGames.length === 0 ? (
             <p className='h-[100vh]'>No games/apps found...</p>
