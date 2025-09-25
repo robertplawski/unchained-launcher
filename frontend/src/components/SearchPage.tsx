@@ -134,11 +134,11 @@ export default function SearchPage() {
   }, []);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
+    /*if (!searchQuery.trim()) {
       setSearchResults(null);
       setIsSearching(false);
       return;
-    }
+    }*/
 
     setIsSearching(true);
 
@@ -157,20 +157,7 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
-    if (query) {
-      handleSearch(query);
-    } else {
-      if (selectedCategory === 'library') {
-        loadGames();
-      } else if (selectedCategory === 'all' || selectedCategory === 'bay') {
-        // Load default search results for 'all' and 'bay' categories
-        handleSearch('popular');
-      } else {
-        // Clear results for other categories
-        setGames([]);
-        setSearchResults(null);
-      }
-    }
+    handleSearch(query);
   }, [query, selectedCategory, loadGames, handleSearch]);
 
   // Only show loading when initially loading games (not when searching)

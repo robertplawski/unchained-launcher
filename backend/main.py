@@ -121,6 +121,10 @@ def process_game_metadata(game_data):
 def search_library_games(query: str, limit: int):
     """Search for library games based on the query"""
     matching_games = []
+    if query is None:
+        # Return all library games if query is None
+        return {"games": games_cache[:limit], "count": len(games_cache)}
+    
     query_lower = query.lower()
     for game in games_cache:
         # Check if the game name matches the query
@@ -133,6 +137,10 @@ def search_library_games(query: str, limit: int):
 
 def search_igdb_games(query: str, limit: int):
     """Search for games using IGDB API"""
+    if query is None:
+        # Return empty result when query is None for IGDB
+        return {"games": [], "count": 0}
+    
     token = get_igdb_token()
     headers = {
         "Client-ID": IGDB_CLIENT_ID,
@@ -389,7 +397,7 @@ class LaunchRequest(BaseModel):
     exe: Optional[str] = None
 
 class SearchRequest(BaseModel):
-    query: str
+    query: Optional[str] = None
     category: Optional[str] = "all"  # all, library, bay, apps
     limit: Optional[int] = 10
 
@@ -410,6 +418,10 @@ from typing import Dict, Any
 
 def search_flatpak_apps(query: str, limit: int) -> Dict[str, Any]:
     """Search for Flatpak apps using Flathub API"""
+    if query is None:
+        # Return empty result when query is None for Flatpak
+        return {"games": [], "count": 0}
+    
     try:
         # Use Flathub API to search for apps - based on the OpenAPI spec
         search_url = "https://flathub.org/api/v2/search"
@@ -521,26 +533,57 @@ def get_igdb_game_metadata(game_id: int):
 @app.post("/api/search")
 def search_games(request: SearchRequest):
     """Search for games based on category"""
+    query = request.query
+
+    if not query:
+        # TODO
+        games = scan_games()
+        library_results = {"games":games,"count":len(games)}
+        all_results = [
+            {"category": "library", "results": library_results},
+            #{"category": "bay", "results": igdb_results},
+            #{"category": "apps", "results": apps_results},
+            #{"category": "peers", "results": peers_results}
+        ]
+        # Collect all games from all categories
+        all_games = []
+        for result in all_results:
+            all_games.extend(result["results"]["games"])
+        
+        # Remove duplicates from the combined list
+        unique_games = remove_duplicates(all_games)
+        
+        # Create the final result
+        final_result = {"games": unique_games, "count": len(unique_games)}
+
+        return {
+            "library": {"games": remove_duplicates(library_results["games"]), "count": len(remove_duplicates(library_results["games"]))},
+            #"peers": peers_results,
+            #"bay": {"games": remove_duplicates(igdb_results["games"]), "count": len(remove_duplicates(igdb_results["games"]))},
+            #"apps": {"games": remove_duplicates(apps_results["games"]), "count": len(remove_duplicates(apps_results["games"]))},
+            "all": final_result
+        }
+
     category = request.category or "all"
     limit = min(request.limit or 50, 50)  # Default to 10 if None, max 50
     
     if category == "library":
-        result = search_library_games(request.query, limit)
+        result = search_library_games(query, limit)
         result["games"] = remove_duplicates(result["games"])
         return result
     elif category == "apps":
-        result = search_flatpak_apps(request.query, limit)
+        result = search_flatpak_apps(query, limit)
         result["games"] = remove_duplicates(result["games"])
         return result
     elif category == "bay":
-        result = search_igdb_games(request.query, limit)
+        result = search_igdb_games(query, limit)
         result["games"] = remove_duplicates(result["games"])
         return result
     elif category == "all":
         # Search all categories and return combined results with counts
-        library_results = search_library_games(request.query, limit)
-        igdb_results = search_igdb_games(request.query, limit)
-        apps_results = search_flatpak_apps(request.query, limit)
+        library_results = search_library_games(query, limit)
+        igdb_results = search_igdb_games(query, limit)
+        apps_results = search_flatpak_apps(query, limit)
         peers_results = {"games": [], "count": 0}  # Placeholder
 
         # Combine all results
