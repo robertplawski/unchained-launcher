@@ -265,6 +265,7 @@ class LaunchRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
+    category: Optional[str] = "all"  # all, installed, bay, apps
     limit: Optional[int] = 10
 
 
@@ -284,104 +285,124 @@ def refresh_games():
 
 @app.post("/api/search")
 def search_games(request: SearchRequest):
-    """Search for games using IGDB API"""
-    token = get_igdb_token()
-    headers = {
-        "Client-ID": IGDB_CLIENT_ID,
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
-    }
-    
-    # Escape quotes in query to prevent broken query
-    import re
-    safe_query = re.sub(r'"', '', request.query)
-    
+    """Search for games based on category"""
+    category = request.category or "all"
     limit = min(request.limit or 10, 50)  # Default to 10 if None, max 50
     
-    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
-    # filter for pc games only (platform id 6 = pc) and main games only (category 0 = main game)
-    # search already sorts by relevance internally
-    query = (
-        f'fields {fields}; '
-        #f'search "{safe_query}"; '
-        f'where name = "{safe_query}" & platforms = (6) & game_type = 0; '
-            #f'sort rating desc; '
-        f'limit {limit};'
-    )
-
-    resp = requests.post(IGDB_URL, headers=headers, data=query)
-    if resp.status_code == 401:  # token expired
+    # Handle different categories
+    if category == "installed":
+        # Return installed games that match the query
+        matching_games = []
+        query_lower = request.query.lower()
+        for game in games_cache:
+            # Check if the game name matches the query
+            if query_lower in game["name"].lower():
+                matching_games.append(game)
+            # Check if metadata name matches the query
+            elif game["metadata"] and query_lower in (game["metadata"].get("name", "") or "").lower():
+                matching_games.append(game)
+        return {"games": matching_games[:limit], "count": len(matching_games)}
+    
+    elif category == "apps":
+        # For Flatpak apps, we would need to implement Flatpak search
+        # This is a placeholder implementation that returns empty results
+        return {"games": [], "count": 0, "message": "Flatpak search not yet implemented"}
+    
+    elif category == "bay" or category == "all":
+        # Search using IGDB API (bay category)
         token = get_igdb_token()
-        headers["Authorization"] = f"Bearer {token}"
-        resp = requests.post(IGDB_URL, headers=headers, data=query)
-    
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail=f"IGDB API error: {resp.text}")
-    
-    import difflib
-    games = resp.json()
-    games = [g for g in games if 'rating' in g and g['rating'] is not None]
-    games =sorted(
-        games,
-        key=lambda g: difflib.SequenceMatcher(None, g.get('name', ''), safe_query).ratio(),
-        reverse=True
-    )
-    #games = sorted(
-    #    games,
-    #    key = lambda g: g.get('rating',0),
-    #    reverse=True
-    #)
-    
-    # Process the games to match our metadata format
-    processed_games = []
-    for game in games:
-        # Process cover URL
-        cover_url = game.get("cover", {}).get("url")
-        if cover_url and cover_url.startswith("//"):
-            cover_url = "https:" + cover_url
-            
-        # Process screenshots
-        screenshots = []
-        for sc in game.get("screenshots", []):
-            sc_url = sc.get("url")
-            if sc_url and sc_url.startswith("//"):
-                sc_url = "https:" + sc_url
-            screenshots.append(sc_url)
-            
-        # Process artworks
-        artworks = []
-        for art in game.get("artworks", []):
-            art_url = art.get("url")
-            if art_url and art_url.startswith("//"):
-                art_url = "https:" + art_url
-            artworks.append(art_url)
-            
-        # Process Steam ID
-        steam_id = None
-        for site in game.get("websites", []):
-            if site.get("category") == 1:  # Steam
-                import re
-                match = re.search(r"/app/(\d+)", site.get("url", ""))
-                if match:
-                    steam_id = match.group(1)
-                    break
-        
-        processed_game = {
-            "name": game.get("name"),
-            "genres": [g["name"] for g in game.get("genres", [])] if game.get("genres") else [],
-            "platforms": [p["name"] for p in game.get("platforms", [])] if game.get("platforms") else [],
-            "first_release_date": game.get("first_release_date"),
-            "summary": game.get("summary"),
-            "rating": game.get("rating"),
-            "total_rating": game.get("total_rating"),
-            "cover": cover_url,
-            "screenshots": screenshots,
-            "artworks": artworks,
-            "steam_id": steam_id
+        headers = {
+            "Client-ID": IGDB_CLIENT_ID,
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json"
         }
-        processed_games.append(processed_game)
         
-    return {"games": processed_games, "count": len(processed_games)}
+        # Escape quotes in query to prevent broken query
+        import re
+        safe_query = re.sub(r'"', '', request.query)
+        
+        fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
+        # filter for pc games only (platform id 6 = pc) and main games only (category 0 = main game)
+        # search already sorts by relevance internally
+        query = (
+            f'fields {fields}; '
+            f'search "{safe_query}"; '
+            f'where platforms = (6) & game_type = 0; '
+            f'limit {limit};'
+        )
+
+        resp = requests.post(IGDB_URL, headers=headers, data=query)
+        if resp.status_code == 401:  # token expired
+            token = get_igdb_token()
+            headers["Authorization"] = f"Bearer {token}"
+            resp = requests.post(IGDB_URL, headers=headers, data=query)
+        
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=f"IGDB API error: {resp.text}")
+        
+        import difflib
+        games = resp.json()
+        games = [g for g in games if 'rating' in g and g['rating'] is not None]
+        games = sorted(
+            games,
+            key=lambda g: difflib.SequenceMatcher(None, g.get('name', ''), safe_query).ratio(),
+            reverse=True
+        )
+        
+        # Process the games to match our metadata format
+        processed_games = []
+        for game in games:
+            # Process cover URL
+            cover_url = game.get("cover", {}).get("url")
+            if cover_url and cover_url.startswith("//"):
+                cover_url = "https:" + cover_url
+                
+            # Process screenshots
+            screenshots = []
+            for sc in game.get("screenshots", []):
+                sc_url = sc.get("url")
+                if sc_url and sc_url.startswith("//"):
+                    sc_url = "https:" + sc_url
+                screenshots.append(sc_url)
+                
+            # Process artworks
+            artworks = []
+            for art in game.get("artworks", []):
+                art_url = art.get("url")
+                if art_url and art_url.startswith("//"):
+                    art_url = "https:" + art_url
+                artworks.append(art_url)
+                
+            # Process Steam ID
+            steam_id = None
+            for site in game.get("websites", []):
+                if site.get("category") == 1:  # Steam
+                    import re
+                    match = re.search(r"/app/(\d+)", site.get("url", ""))
+                    if match:
+                        steam_id = match.group(1)
+                        break
+            
+            processed_game = {
+                "name": game.get("name"),
+                "genres": [g["name"] for g in game.get("genres", [])] if game.get("genres") else [],
+                "platforms": [p["name"] for p in game.get("platforms", [])] if game.get("platforms") else [],
+                "first_release_date": game.get("first_release_date"),
+                "summary": game.get("summary"),
+                "rating": game.get("rating"),
+                "total_rating": game.get("total_rating"),
+                "cover": cover_url,
+                "screenshots": screenshots,
+                "artworks": artworks,
+                "steam_id": steam_id
+            }
+            processed_games.append(processed_game)
+            
+        return {"games": processed_games, "count": len(processed_games)}
+    
+    else:
+        # Default to IGDB search for any other category
+        return {"games": [], "count": 0, "message": f"Unknown category: {category}"}
 
 
 app.mount("/api/metadata", StaticFiles(directory=METADATA_DIR), name="metadata")

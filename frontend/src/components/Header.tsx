@@ -11,6 +11,7 @@ export default function Header() {
   const isOnSearchPage = location.pathname === '/search';
 
   // Get current query from URL and use it as input value
+  const [query,setQuery] = useState('');
   const currentQuery = searchParams.get('q') || '';
   const [inputValue, setInputValue] = useState(currentQuery);
 
@@ -51,24 +52,38 @@ export default function Header() {
     };
   }, []);
 
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const query = e.currentTarget.value.trim();
-      if (query) {
-        navigate(`/search?q=${encodeURIComponent(query)}`);
-      } else {
-        navigate("/search"); // or stay on current page if empty
-      }
-      // Optional: blur input after search
-      inputRef.current?.blur();
+const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === "Enter") {
+    const query = e.currentTarget.value.trim();
+    
+    // Get current URL and parse existing parameters
+    const currentUrl = new URL(window.location.href);
+    const currentParams = new URLSearchParams(currentUrl.search);
+    
+    if (query) {
+      // Update only the query parameter, keep others
+      currentParams.set('q', query);
+    } else {
+      // Remove query parameter if empty, keep others
+      currentParams.delete('q');
     }
-  };
+    
+    // Build new URL with updated parameters
+    const newSearch = currentParams.toString();
+    const newPath = `${currentUrl.pathname}${newSearch ? '?' + newSearch : ''}`;
+    
+    navigate(newPath);
+    
+    // Optional: blur input after search
+    inputRef.current?.blur();
+  }
+};
 
   // Handle input changes to update the state
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-
-    //navigate(`/search?q=${encodeURIComponent(query)}`);
+    setQuery(query)
+  //navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
 

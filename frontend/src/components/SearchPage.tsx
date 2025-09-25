@@ -1,11 +1,10 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GameCard from './GameCard';
-import SeeLibraryCard from './SeeLibraryCard';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { GameInfo } from '../types';
 import { fetchGames, searchGames } from '../api';
 
-const categories = ["all", "installed", "library", "bay", "apps"]
+const categories = ["all", "installed", "bay", "peers", "apps"]
 
 function CategoryButton({
   name,
@@ -143,11 +142,22 @@ export default function SearchPage() {
     setIsSearching(true);
 
     try {
-      console.log('Searching for:', searchQuery); // Debug log
+      console.log('Searching for:', searchQuery, 'in category:', selectedCategory); // Debug log
       const results = await searchGames(searchQuery);
-      console.log('Search results:', results.length); // Debug log
+      console.log('Search results:', results); // Debug log
 
-      setSearchResults(results);
+      // Check if results contain a message (like for apps category)
+      if (results) {
+        setSearchResults(results);
+      }/* else if (results && typeof results === 'object' && 'games' in results) {
+        // Handle standard response format { games: [...], count: ... }
+        setSearchResults(results.games || []);
+      } else if (results && typeof results === 'object' && 'message' in results) {
+        // Handle placeholder responses (like apps category)
+        setSearchResults([]);
+      } else {
+        setSearchResults([]);
+      }*/
     } catch (error) {
       console.error('Search failed:', error);
       setSearchResults([]);
@@ -160,18 +170,28 @@ export default function SearchPage() {
     if (query) {
       handleSearch(query);
     } else {
-      loadGames();
-      setSearchResults([]);
+      if (selectedCategory === 'installed') {
+        loadGames();
+      } else if (selectedCategory === 'all' || selectedCategory === 'bay') {
+        // Load default search results for 'all' and 'bay' categories
+        handleSearch('popular');
+      } else {
+        // Clear results for other categories
+        setGames([]);
+        setSearchResults([]);
+      }
     }
-  }, [query]);
+  }, [query,  loadGames, handleSearch]);
 
   // Only show loading when initially loading games (not when searching)
   const showLoading = loading && !query;
 
-  const displayedGames = useMemo(() => query ? searchResults : games, [query, games, searchResults]);
+  const displayedGames = useMemo(() => {
+    return searchResults[selectedCategory || 'all']?.games || [] 
+  }, [query, games, selectedCategory, searchResults]);
 
   // Arrow navigation
-  const [currentIndex, setCurrentIndex] = useArrowCounter(0, Math.max(0, displayedGames.length), (v: number) => {
+  const [currentIndex, setCurrentIndex] = useArrowCounter(0, Math.max(0, displayedGames?.length), (v: number) => {
     if (v === displayedGames.length) {
       // "View more in your library" card is selected
       handleSeeLibrary();
@@ -205,7 +225,7 @@ export default function SearchPage() {
 
     // Reset current index when games change
     setCurrentIndex(0);
-  }, [displayedGames, setCurrentIndex]);
+  }, [displayedGames, selectedCategory, setCurrentIndex]);
 
   const handleLaunch = async (index: number) => {
     if (index === displayedGames.length) {
@@ -243,7 +263,8 @@ export default function SearchPage() {
             <CategoryButton
               key={category}
               name={category}
-              count={displayedGames.length}
+              count={searchResults[category]?.count || 0}
+
               selected={selectedCategory === category}
               onClick={() => handleCategorySelect(category)}
             />
@@ -256,11 +277,12 @@ export default function SearchPage() {
           <div className="text-center py-8">
             <p className="text-neutral-400">Loading games...</p>
           </div>
-        ) : (
+        ) : (displayedGames?.length == 0) ? (<p>No games/apps found...</p>) : (
           <div className="flex flex-row gap-8 px-8 pb-16 flex-wrap justify-center pl-0">
-            {displayedGames.map((game: any, index: number) => (
+            {displayedGames?.map((game: any, index: number) => (
+
               <div
-                key={game.id || index}
+                key={selectedCategory+game.name || index}
                 data-id={index}
                 ref={(el) => {
                   gameRefs.current[index] = el;
@@ -273,20 +295,23 @@ export default function SearchPage() {
                   game={{
                     id: game.id || index,
                     name: game.name,
-                    appid: game.steam_id,
+                    appid: game.steam_id || game.appid,
                     exes: [],
                     metadata: {
-                      cover: game.cover ? game.cover.replace('t_thumb', 't_720p') : undefined,
-                      big: game.cover ? game.cover.replace('t_thumb', 't_720p') : undefined,
-                      screenshots: game.screenshots?.map((s: string) => s?.replace('t_thumb', 't_screenshot_huge')) || [],
-                      artworks: game.artworks?.map((a: string) => a?.replace('t_thumb', 't_1080p')) || [],
-                      genres: game.genres || [],
-                      platforms: game.platforms || [],
-                      first_release_date: game.first_release_date,
-                      summary: game.summary,
-                      steam_id: game.steam_id
+                      cover: (game.cover || (game.metadata && game.metadata.cover)) ?
+                        (game.cover || game.metadata.cover).replace('t_thumb', 't_720p') : undefined,
+                      big: (game.cover || (game.metadata && game.metadata.big)) ?
+                        (game.cover || game.metadata.big).replace('t_thumb', 't_720p') : undefined,
+                      screenshots: (game.screenshots || (game.metadata && game.metadata.screenshots) || []).map((s: string) => s?.replace('t_thumb', 't_screenshot_huge')) || [],
+                      artworks: (game.artworks || (game.metadata && game.metadata.artworks) || []).map((a: string) => a?.replace('t_thumb', 't_1080p')) || [],
+                      genres: game.genres || (game.metadata && game.metadata.genres) || [],
+                      platforms: game.platforms || (game.metadata && game.metadata.platforms) || [],
+                      first_release_date: game.first_release_date || (game.metadata && game.metadata.first_release_date),
+                      summary: game.summary || (game.metadata && game.metadata.summary),
+                      steam_id: game.steam_id || (game.metadata && game.metadata.steam_id)
                     },
-                    installed: false
+                    installed: selectedCategory === 'installed',
+                    size: game.size || 0
                   }}
                 />
               </div>

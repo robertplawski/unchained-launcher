@@ -8,9 +8,10 @@ export const fetchGames = async (): Promise<GameInfo[]> => {
   return res.data;
 };
 
-export const searchGames = async (query: string): Promise<any[]> => {
-  const res = await axios.post(`${API_URL}/search`, { query });
-  return res.data.games;
+export const searchGames = async (query: string, category: string = "all"): Promise<any[] | { games: any[]; count: number; message?: string }> => {
+  const res = await axios.post(`${API_URL}/search`, { query, category });
+  // Return the entire response data so we can check for messages
+  return res.data;
 };
 
 export const launchGame = async (gameId: number, exe?: string) => {
