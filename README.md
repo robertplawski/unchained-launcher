@@ -6,8 +6,7 @@
 # DEMO
 
 
-https://github.com/user-attachments/assets/cb979a9b-7622-4872-ae93-a389ca3dcd0d
-
+https://github.com/user-attachments/assets/46e68dae-4ce5-4ea2-b971-65ec08e2483d
 
 # Why?
 > Because I don't like steam's monopoly but I like their ui.
