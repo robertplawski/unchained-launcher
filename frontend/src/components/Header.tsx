@@ -22,7 +22,9 @@ export default function Header() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOnSearchPage) {
-        navigate(-1); // Go back to the previous page
+        // Remove query parameters from current location
+        const cleanPath = window.location.pathname;
+        navigate("/");
       }
     };
 

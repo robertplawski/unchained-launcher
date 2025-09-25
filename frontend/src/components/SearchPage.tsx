@@ -59,6 +59,7 @@ export default function SearchPage() {
   }, []);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
+
     if (!searchQuery.trim()) {
       setSearchResults([]);
       setIsSearching(false);
@@ -88,7 +89,7 @@ export default function SearchPage() {
       loadGames();
       setSearchResults([]);
     }
-  }, [query, handleSearch, loadGames]);
+  }, [query]);
 
   // Only show loading when initially loading games (not when searching)
   const showLoading = loading && !query;
@@ -116,10 +117,6 @@ export default function SearchPage() {
         {showLoading ? (
           <div className="text-center py-8">
             <p className="text-neutral-400">Loading games...</p>
-          </div>
-        ) : isSearching ? (
-          <div className="text-center py-8">
-            <p className="text-neutral-400">Searching...</p>
           </div>
         ) : (
 
@@ -151,13 +148,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {!showLoading && !isSearching && displayedGames.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-neutral-400">
-              {query ? 'No games found. Try a different search term.' : 'No games in your library.'}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -304,7 +304,7 @@ def search_games(request: SearchRequest):
     query = (
         f'fields {fields}; '
         f'search "{safe_query}"; '
-        f'where platforms = (6) & game_type = 0; '
+        f'where platforms = (6) & version_parent = null & game_type = 0; '
             #f'sort rating desc; '
         f'limit {limit};'
     )
