@@ -4,7 +4,7 @@ import { type GameInfo, type LaunchRequest } from "./types";
 export const API_URL = "/api";
 
 export const fetchGames = async (): Promise<GameInfo[]> => {
-  const res = await axios.get<GameInfo[]>(`${API_URL}/games`);
+  const res = await axios.get<GameInfo[]>(`${API_URL}/library`);
   return res.data;
 };
 

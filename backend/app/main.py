@@ -103,8 +103,10 @@ def fetch_game_metadata(game_name: str):
     safe_game_name = re.sub(r'"', '', game_name)
 
     fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url"
-    query = f'search "{safe_game_name}"; fields {fields}; limit 1;'
-
+# Filter for PC games only (platform ID 6 = PC) and main games only (category 0 = main game)
+    # Search already sorts by relevance internally
+    query = f'search "{safe_game_name}"; fields {fields}; where platforms = (6) & game_type= 0; limit 1;'
+    
     resp = requests.post(IGDB_URL, headers=headers, data=query)
     if resp.status_code == 401:  # token expired
         token = get_igdb_token()
@@ -196,6 +198,11 @@ def fetch_game_metadata(game_name: str):
     return metadata_dict
 
 # -------------------- Game Scanner --------------------
+def get_directory_size_mb(path):
+    """Get directory size in megabytes using pathlib"""
+    path = Path(path)
+    total_size = sum(f.stat().st_size for f in path.rglob('*') if f.is_file())
+    return total_size / (1024 * 1024)
 
 def scan_games():
     games = []
@@ -223,7 +230,8 @@ def scan_games():
                 "appid": appid,
                 "exes": exe_files,
                 "path": dir_path,
-                "metadata": metadata 
+                "metadata": metadata,
+                "size":get_directory_size_mb(dir_path)
             })
     return games
 
@@ -250,82 +258,130 @@ class GameInfo(BaseModel):
     appid: Optional[str]
     exes: List[str]
     metadata: Optional[GameMetadata]
+    size:float 
 
 class LaunchRequest(BaseModel):
     exe: Optional[str] = None
 
+class SearchRequest(BaseModel):
+    query: str
+    limit: Optional[int] = 10
+
 
 
 # -------------------- Endpoints --------------------
-@app.get("/api/games", response_model=List[GameInfo])
+
+
+@app.get("/api/library", response_model=List[GameInfo])
 def list_games():
     return games_cache
-
-@app.post("/api/games/{game_id}/launch")
-def launch_game(game_id: int, req: Optional[LaunchRequest] = None):
-    # Find game
-    game = next((g for g in games_cache if g["id"] == game_id), None)
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-
-    if not game["exes"]:
-        raise HTTPException(status_code=400, detail="No .exe found for this game")
-
-    # Pick executable
-    exe_to_run = req.exe if req and req.exe else game["exes"][0]
-    if exe_to_run not in game["exes"]:
-        raise HTTPException(status_code=400, detail="Invalid executable choice")
-
-    # -------------------- Wine prefix --------------------
-    wine_prefix = PREFIXES_DIR / game["name"]
-    wine_prefix.mkdir(exist_ok=True)
-    if not (wine_prefix / "system.reg").exists():
-        subprocess.run(
-            ["wineboot", "-i"],
-            cwd=game["path"],
-            env={**os.environ, "WINEPREFIX": str(wine_prefix)}
-        )
-
-    # -------------------- Save directory --------------------
-    game_save_dir = SAVES_DIR / game["name"]
-    game_save_dir.mkdir(exist_ok=True)
-
-    # Optional: symlink "My Games" inside save dir
-    my_games_folder = wine_prefix / "drive_c" / "users" / os.getlogin() / "My Documents" / "My Games"
-    target_folder = game_save_dir / "My Games"
-    if my_games_folder.exists() and not target_folder.exists():
-        try:
-            os.symlink(my_games_folder, target_folder)
-        except FileExistsError:
-            pass
-
-    # -------------------- Launch game --------------------
-    try:
-        env = os.environ.copy()
-        env["WINEPREFIX"] = str(wine_prefix)
-        env["GAME_SAVE_DIR"] = str(game_save_dir)
-        subprocess.Popen(
-            ["umu-run", exe_to_run],
-            cwd=game["path"],
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to launch: {e}")
-
-    return {
-        "message": f"Launched {game['name']} -> {exe_to_run}",
-        "wine_prefix": str(wine_prefix),
-        "save_dir": str(game_save_dir),
-        "cover_image": game.get("cover_image")
-    }
 
 @app.post("/api/refresh")
 def refresh_games():
     global games_cache
     games_cache = scan_games()
     return {"message": "Game list refreshed", "count": len(games_cache)}
+
+@app.post("/api/search")
+def search_games(request: SearchRequest):
+    """Search for games using IGDB API"""
+    token = get_igdb_token()
+    headers = {
+        "Client-ID": IGDB_CLIENT_ID,
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
+    }
+    
+    # Escape quotes in query to prevent broken query
+    import re
+    safe_query = re.sub(r'"', '', request.query)
+    
+    limit = min(request.limit or 10, 50)  # Default to 10 if None, max 50
+    
+    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
+    # filter for pc games only (platform id 6 = pc) and main games only (category 0 = main game)
+    # search already sorts by relevance internally
+    query = (
+        f'fields {fields}; '
+        f'search "{safe_query}"; '
+        f'where platforms = (6) & game_type = 0; '
+            #f'sort rating desc; '
+        f'limit {limit};'
+    )
+
+    resp = requests.post(IGDB_URL, headers=headers, data=query)
+    if resp.status_code == 401:  # token expired
+        token = get_igdb_token()
+        headers["Authorization"] = f"Bearer {token}"
+        resp = requests.post(IGDB_URL, headers=headers, data=query)
+    
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=f"IGDB API error: {resp.text}")
+    
+    import difflib
+    games = resp.json()
+    games = [g for g in games if 'rating' in g and g['rating'] is not None]
+    games =sorted(
+        games,
+        key=lambda g: difflib.SequenceMatcher(None, g.get('name', ''), safe_query).ratio(),
+        reverse=True
+    )
+    #games = sorted(
+    #    games,
+    #    key = lambda g: g.get('rating',0),
+    #    reverse=True
+    #)
+    
+    # Process the games to match our metadata format
+    processed_games = []
+    for game in games:
+        # Process cover URL
+        cover_url = game.get("cover", {}).get("url")
+        if cover_url and cover_url.startswith("//"):
+            cover_url = "https:" + cover_url
+            
+        # Process screenshots
+        screenshots = []
+        for sc in game.get("screenshots", []):
+            sc_url = sc.get("url")
+            if sc_url and sc_url.startswith("//"):
+                sc_url = "https:" + sc_url
+            screenshots.append(sc_url)
+            
+        # Process artworks
+        artworks = []
+        for art in game.get("artworks", []):
+            art_url = art.get("url")
+            if art_url and art_url.startswith("//"):
+                art_url = "https:" + art_url
+            artworks.append(art_url)
+            
+        # Process Steam ID
+        steam_id = None
+        for site in game.get("websites", []):
+            if site.get("category") == 1:  # Steam
+                import re
+                match = re.search(r"/app/(\d+)", site.get("url", ""))
+                if match:
+                    steam_id = match.group(1)
+                    break
+        
+        processed_game = {
+            "name": game.get("name"),
+            "genres": [g["name"] for g in game.get("genres", [])] if game.get("genres") else [],
+            "platforms": [p["name"] for p in game.get("platforms", [])] if game.get("platforms") else [],
+            "first_release_date": game.get("first_release_date"),
+            "summary": game.get("summary"),
+            "rating": game.get("rating"),
+            "total_rating": game.get("total_rating"),
+            "cover": cover_url,
+            "screenshots": screenshots,
+            "artworks": artworks,
+            "steam_id": steam_id
+        }
+        processed_games.append(processed_game)
+        
+    return {"games": processed_games, "count": len(processed_games)}
 
 app.mount("/api/metadata", StaticFiles(directory=METADATA_DIR), name="metadata")
 
@@ -343,4 +399,4 @@ async def serve_react_app(full_path: str):
 # -------------------- Run server --------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

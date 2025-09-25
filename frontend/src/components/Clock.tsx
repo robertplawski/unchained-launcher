@@ -17,7 +17,7 @@ const Clock: React.FC = () => {
     return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
-  return <div className="font-bold text-2xl">{time}</div>;
+  return <div className="font-bold">{time}</div>;
 };
 
 export default Clock;
