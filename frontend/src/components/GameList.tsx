@@ -126,7 +126,12 @@ const GameList: React.FC = () => {
 
   const navigate = useNavigate();
   const handleLaunch = async (index: number) => {
-    navigate("/game/" + games[index].name)
+    if (index === games.length) {
+      // "View more in your library" card is selected
+      navigate("/search");
+    } else {
+      navigate("/game/" + games[index].name)
+    }
   };
   // scroll to the currently selected game whenever index changes
   useEffect(() => {
@@ -168,7 +173,10 @@ const GameList: React.FC = () => {
             />
           </div>
         ))}
-        <SeeLibraryCard selected={currentIndex == games.length} />
+        <SeeLibraryCard 
+          selected={currentIndex == games.length} 
+          onClick={() => navigate("/search")}
+        />
       </div>
     </div >
   );

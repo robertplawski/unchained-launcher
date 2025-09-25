@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GameCard from './GameCard';
+import SeeLibraryCard from './SeeLibraryCard';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { GameInfo } from '../types';
 import { fetchGames, searchGames } from '../api';
@@ -170,7 +171,14 @@ export default function SearchPage() {
   const displayedGames = useMemo(() => query ? searchResults : games, [query, games, searchResults]);
 
   // Arrow navigation
-  const [currentIndex, setCurrentIndex] = useArrowCounter(0, Math.max(0, displayedGames.length - 1), (v: number) => handleLaunch(v));
+  const [currentIndex, setCurrentIndex] = useArrowCounter(0, Math.max(0, displayedGames.length), (v: number) => {
+    if (v === displayedGames.length) {
+      // "View more in your library" card is selected
+      handleSeeLibrary();
+    } else {
+      handleLaunch(v);
+    }
+  });
   const gameRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   // Update refs when games change
@@ -182,7 +190,15 @@ export default function SearchPage() {
       if (ref) {
         ref.addEventListener("click", () => {
           const id = ref.dataset.id;
-          if (id) setCurrentIndex(parseInt(id));
+          if (id) {
+            const index = parseInt(id);
+            if (index === displayedGames.length) {
+              // "View more in your library" card is clicked
+              handleSeeLibrary();
+            } else {
+              setCurrentIndex(index);
+            }
+          }
         });
       }
     });
@@ -192,7 +208,10 @@ export default function SearchPage() {
   }, [displayedGames, setCurrentIndex]);
 
   const handleLaunch = async (index: number) => {
-    if (displayedGames[index]) {
+    if (index === displayedGames.length) {
+      // "View more in your library" card is selected
+      navigate("/search");
+    } else if (displayedGames[index]) {
       const game = displayedGames[index];
       const gameName = game.name || `game-${game.id}`;
       navigate("/game/" + encodeURIComponent(gameName));
@@ -210,6 +229,11 @@ export default function SearchPage() {
       });
     }
   }, [currentIndex]);
+
+  // Handle the "View more in your library" card
+  const handleSeeLibrary = () => {
+    navigate("/search");
+  };
 
   return (
     <div>
@@ -267,6 +291,7 @@ export default function SearchPage() {
                 />
               </div>
             ))}
+
           </div>
         )}
       </div>
