@@ -103,6 +103,7 @@ def process_game_metadata(game_data):
                 break
     
     return {
+        "id": game_data.get("id"),
         "name": game_data.get("name"),
         "genres": [g["name"] for g in game_data.get("genres", [])] if game_data.get("genres") else [],
         "platforms": [p["name"] for p in game_data.get("platforms", [])] if game_data.get("platforms") else [],
@@ -143,7 +144,8 @@ def search_igdb_games(query: str, limit: int):
     import re
     safe_query = re.sub(r'"', '', query)
     
-    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
+    fields = "id,name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
+
     # filter for pc games only (platform id 6 = pc) and main games only (category 0 = main game)
     query_igdb = (
         f'fields {fields}; '
@@ -165,6 +167,8 @@ def search_igdb_games(query: str, limit: int):
     
     import difflib
     games = resp.json()
+    for g in games:
+        g['category'] = 'bay'
     games = [g for g in games if 'rating' in g and g['rating'] is not None]
  
 
@@ -210,18 +214,24 @@ def fetch_game_metadata(game_name: str):
 
     # Escape quotes in game_name to prevent broken query
     import re
-    safe_game_name = re.sub(r'"', '', game_name)
+    safe_query = re.sub(r'"', '', game_name)
 
-    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url"
-# Filter for PC games only (platform ID 6 = PC) and main games only (category 0 = main game)
-    # Search already sorts by relevance internally
-    query = f'search "{safe_game_name}"; fields {fields}; where platforms = (6) & game_type= 0; limit 1;'
-    
-    resp = requests.post(IGDB_URL, headers=headers, data=query)
+    fields = "id,name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
+
+    # filter for pc games only (platform id 6 = pc) and main games only (category 0 = main game)
+    query_igdb = (
+        f'fields {fields}; '
+        f'search "{safe_query}*"; '
+        # remember to change these platforms in order to support emulation
+        f'where platforms = (6) &  game_type = (0,4,8,9,10,11,12); '
+
+        f'limit 100;'
+    )
+    resp = requests.post(IGDB_URL, headers=headers, data=query_igdb)
     if resp.status_code == 401:  # token expired
         token = get_igdb_token()
         headers["Authorization"] = f"Bearer {token}"
-        resp = requests.post(IGDB_URL, headers=headers, data=query)
+        resp = requests.post(IGDB_URL, headers=headers, data=query_igdb)
 
     if resp.status_code != 200:
         print(f"[IGDB] Failed for {game_name}: {resp.status_code} {resp.text}")
@@ -288,6 +298,7 @@ def fetch_game_metadata(game_name: str):
 
     # ----- Build metadata dict -----
     metadata_dict = {
+        "id": game.get('id'),
         "name": game.get("name"),
         "genres": [g["name"] for g in game.get("genres", [])] if game.get("genres") else [],
         "platforms": [p["name"] for p in game.get("platforms", [])] if game.get("platforms") else [],
@@ -334,6 +345,7 @@ def scan_games():
             # Fetch metadata while scanning
             metadata = fetch_game_metadata(dir_name)
 
+            
             games.append({
                 "id": len(games),
                 "name": dir_name,
@@ -352,6 +364,7 @@ games_cache = scan_games()
 from typing import Literal
 
 class GameMetadata(BaseModel):
+    id: Optional[int] = None
     cover: Optional[str]
     big: Optional[str]
     screenshots: Optional[List[str]] = []
@@ -369,6 +382,7 @@ class GameInfo(BaseModel):
     exes: List[str]
     metadata: Optional[GameMetadata]
     category: Literal["library", "peers", "bay","apps"] 
+    igdb_id: Optional[int] = None
     size:float 
 
 class LaunchRequest(BaseModel):
@@ -473,6 +487,36 @@ def remove_duplicates(games_list):
             unique_games.append(game)
     
     return unique_games
+
+@app.get("/api/game/igdb/{game_id}")
+def get_igdb_game_metadata(game_id: int):
+    """Get detailed metadata for a specific game by IGDB ID"""
+    token = get_igdb_token()
+    headers = {
+        "Client-ID": IGDB_CLIENT_ID,
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
+    }
+    
+    fields = "name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating,storyline,category,game_modes.name"
+    query = f'fields {fields}; where id = {game_id};'
+    
+    resp = requests.post(IGDB_URL, headers=headers, data=query)
+    if resp.status_code == 401:  # token expired
+        token = get_igdb_token()
+        headers["Authorization"] = f"Bearer {token}"
+        resp = requests.post(IGDB_URL, headers=headers, data=query)
+    
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=f"IGDB API error: {resp.text}")
+    
+    games = resp.json()
+    if not games:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    game = games[0]
+    return process_game_metadata(game)
+
 
 @app.post("/api/search")
 def search_games(request: SearchRequest):

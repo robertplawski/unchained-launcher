@@ -126,7 +126,6 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo, hi
   const navigate = useNavigate();
 
   const openGamePage = useCallback(() => {
-    alert(JSON.stringify(game))
     navigate(`/${game.category}/` + game.name)
   }, [game])
 
