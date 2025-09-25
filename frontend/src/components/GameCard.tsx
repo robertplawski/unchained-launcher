@@ -73,7 +73,7 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last }) => {
     return <>
       <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
       <div className="cursor-pointer relative flex flex-col pb-24 justify-between gap-0 min-h-90 min-w-194 w-194">
-        < img className={`min-h-90 w-194 object-contain transition-[scale,border]  z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`} src={API_URL + "/metadata/Dying Light The Beast/artworks/4.jpg"} />
+        < img className={`min-h-90 w-194 object-contain transition-[scale,border]  z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`} src={artworkUrl} />
         <GameInfo {...{ game, selected }} />
       </div >
     </>

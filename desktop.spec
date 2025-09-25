@@ -11,9 +11,12 @@ a = Analysis(
         ('backend', 'backend'),  # Include backend module
     ],
     hiddenimports=[
+        'webview',
+        'webview.platforms.winforms',  # Add platform-specific imports
+        'webview.platforms.gtk',
+        'webview.platforms.cocoa',
         'uvicorn',
         'backend.main',
-        'webview',
         'fastapi',
         'starlette',
         'pydantic',

@@ -29,7 +29,7 @@ def main():
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-gpu-rasterization --ignore-gpu-blacklist"
 
     # Create webview window
-    window = webview.create_window("Unchained Launcher", BACKEND_URL, frameless=True)
+    window = webview.create_window("Unchained Launcher", BACKEND_URL)
 
     # Start webview GUI
     webview.start(debug=False)  # Set debug to False for production
