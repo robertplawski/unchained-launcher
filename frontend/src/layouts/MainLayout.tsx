@@ -1,10 +1,10 @@
-import { Outlet } from 'react-router-dom';
 import Header from '../components/Header';
+import { Outlet } from 'react-router';
 
 export default function MainLayout() {
   return (
     <>
-      <div className=" text-white relative h-full  max-h-[40rem] max-w-[100vw]  overflow-clip">
+      <div className=" text-white h-full  max-w-[100vw]  overflow-clip">
         <Header />
         <Outlet />
       </div>

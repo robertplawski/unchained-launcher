@@ -46,10 +46,11 @@ const GameStatusInfo = ({ game }: { game: GameInfo }) => {
   </p>
 }
 const GameBackgroundArtwork = ({ selected, last, artworkUrl }: { selected?: boolean, last?: boolean, artworkUrl?: string }) => {
-  return <img className={`-z-1 blur-sm h-full object-cover w-full absolute top-0 left-0 ${selected || last ? 'opacity-20' : 'opacity-0'}  transition-opacity`} src={artworkUrl} />
+  return <img className={`max-h-[40rem] -z-100 blur-sm h-full object-cover w-full fixed top-0 left-0 ${selected || last ? 'opacity-20' : 'opacity-0'}  transition-opacity`} src={artworkUrl} />
 }
 
 const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) => {
+
   return <div className={`transition-[opacity,translate] duration-300 text-nowrap ${selected ? 'translate-y-0  transition-[translate,opacity] duration-300' : 'translate-y-6'}  absolute bottom-0 flex flex-col p-2 gap-2 ${selected ? 'opacity-100' : 'opacity-0'} `}>
 
     <p className=" text-2xl font-bold">{game.name}</p>

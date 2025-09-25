@@ -47,7 +47,7 @@ export function useArrowCounter(
     const handleWheel = (e: WheelEvent) => {
       if (isEditable(document.activeElement)) return;
 
-      const threshold = 125;
+      const threshold = 100;
 
       setValue((prev) => {
         if (e.deltaY < -threshold) return Math.min(max, prev + 1);

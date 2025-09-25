@@ -9,6 +9,7 @@ import './index.css'
 import MainLayout from './layouts/MainLayout.tsx';
 import GameList from './components/GameList.tsx';
 import SearchPage from './components/SearchPage.tsx';
+import AnimatedOutlet from './components/AnimatedOutlet.tsx';
 
 const router = createBrowserRouter([
   {
@@ -17,16 +18,15 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <GameList />
+        element: <AnimatedOutlet><GameList /></AnimatedOutlet>
       },
       {
         path: "/search",
-        element: <SearchPage />
+        element: <AnimatedOutlet><SearchPage /></AnimatedOutlet>
       }
     ]
   }
 ])
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RouterProvider router={router} />

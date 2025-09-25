@@ -1,6 +1,10 @@
 import { useSearchParams } from 'react-router-dom';
+import GameCard from './GameCard';
+import { useEffect, useState } from 'react';
+import type { GameInfo } from '../types';
+import { fetchGames } from '../api';
 
-const categories = ["all", "library", "bay", "friends", "apps"]
+const categories = ["all", "installed", "library", "bay", "apps"]
 
 function CategoryButton({
   name,
@@ -35,10 +39,25 @@ export default function SearchPage() {
     setSearchParams({ q: query, category });
   };
 
+  // make that into a hook
+  const [_loading, setLoading] = useState<boolean>(true);
+
+  const [games, setGames] = useState<GameInfo[]>([]);
+
+  const loadGames = async () => {
+    setLoading(true);
+    const data = await fetchGames();
+    setGames(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadGames() }, [query])
+
   return <div>
     <div className='p-4 flex flex-row justify-center items-center gap-2'>
-      {categories.map((category) => (
+      {categories.map((category, index) => (
         <CategoryButton
+          key={index}
           name={category}
           count={100}
           selected={selectedCategory === category}
@@ -46,6 +65,22 @@ export default function SearchPage() {
         />
       ))}
     </div>
-    <h1>Search Results for: {query} ({selectedCategory})</h1>
+    <div className='p-4'>
+
+      <div className="flex flex-row gap-10 justify-around px-8 pb-16 w-[100vw] pl-0">
+        {games.map((game) => (
+
+          <div
+            key={game.id}
+            data-id={game.id}
+
+          >
+            <GameCard
+              game={game}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
   </div>
 }
