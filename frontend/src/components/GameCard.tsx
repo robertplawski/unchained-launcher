@@ -13,6 +13,7 @@ interface Props {
   game: GameInfo;
   last?: boolean;
   hideGameInfo?: boolean;
+  hideGameArtwork?: boolean;
 }
 
 export function formatFileSize(mb: number): string {
@@ -64,7 +65,7 @@ const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) =>
   </div>
 }
 
-const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) => {
+const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo, hideGameArtwork }) => {
   const artworks = game.metadata?.artworks;
 
   const artworkUrl = useMemo(() => {
@@ -130,7 +131,7 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) 
 
   if (big) {
     return <>
-      <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
+      {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
       <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-194 w-194 ${!hideGameInfo ? 'pb-24' : ''}`}>
         <LazyLoadImage
 
@@ -142,13 +143,14 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) 
           width="100%"
           height="auto"
         />
+
         {!hideGameInfo && <GameInfo {...{ game, selected }} />}
       </div >
     </>
   }
 
   return <>
-    <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
+    {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
     <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-60 w-60 ${!hideGameInfo ? 'pb-24' : ''}`}>
       <LazyLoadImage
         loading="lazy"
@@ -156,6 +158,12 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) 
         src={cachedMainImageUrl}
         placeholderSrc={cachedLowResImageUrl}
         className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`}
+        width="100%"
+        height="auto"
+      />
+      <img
+        src={cachedLowResImageUrl}
+        className={`absolute min-h-90 scale-[1.05] h-90 flex-1 transition-[scale,border,opacity] blur-lg ${selected ? 'opacity-80' : 'opacity-0'}  -z-10 `}
         width="100%"
         height="auto"
       />
