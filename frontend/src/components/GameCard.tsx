@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { type GameInfo } from "../types";
 import { API_URL } from "../api";
 import { LucideDownload, LucidePlay } from "lucide-react";
+import { useImageCache } from "../hooks/useImageCache";
 
 interface Props {
   selected?: boolean;
@@ -47,7 +48,8 @@ const GameStatusInfo = ({ game }: { game: GameInfo }) => {
   </p>
 }
 const GameBackgroundArtwork = ({ selected, last, artworkUrl }: { selected?: boolean, last?: boolean, artworkUrl?: string }) => {
-  return <img className={`max-h-[40rem] -z-100 blur-sm h-full object-cover w-full fixed top-0 left-0 ${selected || last ? 'opacity-20' : 'opacity-0'}  transition-opacity`} src={artworkUrl} />
+  const { cachedImageUrl } = useImageCache(artworkUrl);
+  return <img className={`max-h-[40rem] -z-100 blur-sm h-full object-cover w-full fixed top-0 left-0 ${selected || last ? 'opacity-20' : 'opacity-0'}  transition-opacity`} src={cachedImageUrl} />
 }
 
 const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) => {
@@ -89,11 +91,14 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) 
     return artworkUrl;
   }, [game.metadata?.big, artworkUrl]);
 
+  // Use cached images
+  const { cachedImageUrl: cachedMainImageUrl } = useImageCache(mainImageUrl);
+
   if (big) {
     return <>
       <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
       <div className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-194 w-194 ${!hideGameInfo ? 'pb-24' : ''}`}>
-        < img className={`min-h-90 w-194 object-contain transition-[scale,border]  z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`} src={artworkUrl} />
+        < img className={`min-h-90 w-194 object-contain transition-[scale,border]  z-10 ${selected ? 'shadow-md scale-[1.045] border-1 border-neutral-500' : ''}`} src={cachedMainImageUrl} />
         {!hideGameInfo && <GameInfo {...{ game, selected }} />}
       </div >
     </>
@@ -104,7 +109,7 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) 
     <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
 
     <div className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-60 w-60 ${!hideGameInfo ? 'pb-24' : ''}`} >
-      < img className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`} src={mainImageUrl} />
+      < img className={`min-h-90 h-90 flex-1 transition-[scale,border] z-10 ${selected ? 'scale-[1.045] border-1 shadow-md border-neutral-500' : ''}`} src={cachedMainImageUrl} />
       {!hideGameInfo && <GameInfo {...{ game, selected }} />}
     </div >
   </>
