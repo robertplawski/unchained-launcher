@@ -245,9 +245,11 @@ export default function SearchPage() {
   };
 
   return (
-    <div>
-      <div className='p-4'>
-        <div className='flex flex-row flex-wrap justify-center items-center gap-2'>
+    < >
+
+      <div className="max-h-screen overflow-y-auto pt-16">
+        <div className='sticky top-0 z-10 py-4 flex flex-row flex-wrap justify-center items-center gap-2 bg-black/80 shadow-lg backdrop-blur-lg'>
+
           {categories.map((category) => (
             <CategoryButton
               key={category}
@@ -258,64 +260,65 @@ export default function SearchPage() {
             />
           ))}
         </div>
-      </div>
 
-      <div className='p-4'>
-        {showLoading ? (
-          <div className="text-center py-8">
-            <p className="text-neutral-400">Loading games...</p>
-          </div>
-        ) : displayedGames.length === 0 ? (
-          <p>No games/apps found...</p>
-        ) : (
-          <div className='flex items-center justify-center w-full'>
-            <div className="grid grid-cols-[repeat(2,1fr)] sm:grid-cols-[repeat(3,1fr)] md:grid-cols-[repeat(5,1fr)] lg:grid-cols-[repeat(6,1fr)] gap-8 pb-16">
-              {displayedGames.map((game, index) => (
-                <div
-                  className='col-span-1'
-                  key={`${game.id}-${game.name}-${index}`}
-                  ref={(el) => {
-                    gameRefs.current[index] = el;
-                  }}
-                >
-                  <GameCard
-                    hideGameArtwork={true}
-                    hideGameInfo={true}
-                    selected={currentIndex === index}
-                    game={{
-                      category: game.category,
-                      id: game.id || index,
-                      name: game.name,
-                      exes: [],
-                      metadata: {
-                        cover: getPropertyValue(game.cover, game.metadata?.cover)?.replace('t_thumb', 't_720p'),
-                        big: getPropertyValue(game.cover, game.metadata?.big)?.replace('t_thumb', 't_720p'),
-                        screenshots: mapArray(
-                          game.screenshots,
-                          game.metadata?.screenshots,
-                          (s: string) => s?.replace('t_thumb', 't_screenshot_huge')
-                        ),
-                        artworks: mapArray(
-                          game.artworks,
-                          game.metadata?.artworks,
-                          (a: string) => a?.replace('t_thumb', 't_1080p')
-                        ),
-                        genres: game.genres || game.metadata?.genres || [],
-                        platforms: game.platforms || game.metadata?.platforms || [],
-                        first_release_date: game.first_release_date || game.metadata?.first_release_date,
-                        summary: game.summary || game.metadata?.summary,
-                        steam_id: game.steam_id || game.metadata?.steam_id
-                      },
-                      installed: selectedCategory === 'library',
-                      size: game.size || 0
-                    }}
-                  />
-                </div>
-              ))}
+        <div className='p-4 pb-24 '>
+          {showLoading ? (
+            <div className="text-center py-8">
+              <p className="text-neutral-400">Loading games...</p>
             </div>
-          </div>
-        )}
+          ) : displayedGames.length === 0 ? (
+            <p className='h-[100vh]'>No games/apps found...</p>
+          ) : (
+            <div className=' flex items-center justify-center w-full'>
+              <div className="grid grid-cols-[repeat(2,1fr)] sm:grid-cols-[repeat(3,1fr)] md:grid-cols-[repeat(5,1fr)] lg:grid-cols-[repeat(6,1fr)] gap-8 pb-16">
+                {displayedGames.map((game, index) => (
+                  <div
+                    className='col-span-1'
+                    key={`${game.id}-${game.name}-${index}`}
+                    ref={(el) => {
+                      gameRefs.current[index] = el;
+                    }}
+                  >
+                    <GameCard
+                      hideGameArtwork={true}
+                      hideGameInfo={true}
+                      selected={currentIndex === index}
+                      game={game.category == "library" ? game : {
+                        category: game.category,
+                        id: game.id,
+                        name: game.name,
+                        exes: [],
+                        metadata: {
+                          id: game.id,
+                          cover: getPropertyValue(game.cover, game.metadata?.cover)?.replace('t_thumb', 't_720p'),
+                          big: getPropertyValue(game.cover, game.metadata?.big)?.replace('t_thumb', 't_720p'),
+                          screenshots: mapArray(
+                            game.screenshots,
+                            game.metadata?.screenshots,
+                            (s: string) => s?.replace('t_thumb', 't_screenshot_huge')
+                          ),
+                          artworks: mapArray(
+                            game.artworks,
+                            game.metadata?.artworks,
+                            (a: string) => a?.replace('t_thumb', 't_1080p')
+                          ),
+                          genres: game.genres || game.metadata?.genres || [],
+                          platforms: game.platforms || game.metadata?.platforms || [],
+                          first_release_date: game.first_release_date || game.metadata?.first_release_date,
+                          summary: game.summary || game.metadata?.summary,
+                          steam_id: game.steam_id || game.metadata?.steam_id
+                        },
+                        installed: selectedCategory === 'library',
+                        size: game.size || 0
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

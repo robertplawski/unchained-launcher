@@ -11,7 +11,7 @@ export default function Header() {
   const isOnSearchPage = location.pathname === '/search';
 
   // Get current query from URL and use it as input value
-  const [query,setQuery] = useState('');
+  const [query, setQuery] = useState('');
   const currentQuery = searchParams.get('q') || '';
   const [inputValue, setInputValue] = useState(currentQuery);
 
@@ -52,37 +52,37 @@ export default function Header() {
     };
   }, []);
 
-const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-  if (e.key === "Enter") {
-    const query = e.currentTarget.value.trim();
-    
-    // Get current URL and parse existing parameters
-    const currentUrl = new URL(window.location.href);
-    const currentParams = new URLSearchParams(currentUrl.search);
-    
-    if (query) {
-      // Update only the query parameter, keep others
-      currentParams.set('q', query);
-    } else {
-      // Remove query parameter if empty, keep others
-      currentParams.delete('q');
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const query = e.currentTarget.value.trim();
+
+      // Get current URL and parse existing parameters
+      const currentUrl = new URL(window.location.href);
+      const currentParams = new URLSearchParams(currentUrl.search);
+
+      if (query) {
+        // Update only the query parameter, keep others
+        currentParams.set('q', query);
+      } else {
+        // Remove query parameter if empty, keep others
+        currentParams.delete('q');
+      }
+
+      // Build new URL with updated parameters - go to /search/q
+      const newSearch = currentParams.toString();
+      const newPath = `/search${newSearch ? '?' + newSearch : ''}`;
+      navigate(newPath);
+
+      // Optional: blur input after search
+      inputRef.current?.blur();
     }
-    
-    // Build new URL with updated parameters - go to /search/q
-    const newSearch = currentParams.toString();
-    const newPath = `/search${newSearch ? '?' + newSearch : ''}`;
-    navigate(newPath);
-    
-    // Optional: blur input after search
-    inputRef.current?.blur();
   }
-}
 
   // Handle input changes to update the state
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
     setQuery(query)
-  //navigate(`/search?q=${encodeURIComponent(query)}`);
+    //navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
 
@@ -98,7 +98,7 @@ const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     }
   };
 
-  return <div className={`w-full flex flex-row items-center justify-around text-xl text-white gap-6 focus-within:bg-black ${isOnSearchPage ? 'bg-black' : ''} transition-[background]`}>
+  return <div className={`absolute top-0 z-100 w-full flex flex-row items-center justify-around text-xl text-white gap-6 focus-within:bg-black ${isOnSearchPage ? 'bg-black' : ''} transition-[background]`}>
     <div className={`relative p-4 flex flex-1 items-center flex-row gap-6 italic focus-within:bg-white ${isOnSearchPage ? 'bg-white' : ''} transition-[background]`}>
       <input
         value={inputValue} // Controlled input
@@ -123,5 +123,6 @@ const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     <div className="mr-2 flex items-center justify-center font-bold bg-neutral-700 border-blue-500 border-r-4 w-auto aspect-[1/1] h-8">
       ?
     </div>
+    <div id='category-portal'></div>
   </div>
 }

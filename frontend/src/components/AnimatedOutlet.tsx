@@ -35,8 +35,7 @@ const AnimatedOutlet = ({ children }: PropsWithChildren) => {
           ease: [0.22, 1, 0.36, 1]
         }}
         style={{
-          minHeight: '100vh', // Prevent layout shift
-          position: 'relative'
+          overflow: "hidden",
         }}
       >
         {navigation.state === 'loading' ? prevChildren : children}

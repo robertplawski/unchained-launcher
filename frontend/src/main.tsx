@@ -2,7 +2,6 @@ import {
   createBrowserRouter,
   RouterProvider
 } from 'react-router-dom';
-
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -11,6 +10,8 @@ import GameList from './components/GameList.tsx';
 import SearchPage from './components/SearchPage.tsx';
 import AnimatedOutlet from './components/AnimatedOutlet.tsx';
 import GamePage from './components/GamePage.tsx';
+import { getIgdbGameMetadata } from './api.ts';
+
 
 const router = createBrowserRouter([
   {
@@ -26,8 +27,9 @@ const router = createBrowserRouter([
         element: <AnimatedOutlet><SearchPage /></AnimatedOutlet>
       },
       {
-        path: "/game/:name",
-        element: <AnimatedOutlet><GamePage /></AnimatedOutlet>
+        path: "/game/:gameId",
+        element: <AnimatedOutlet><GamePage /></AnimatedOutlet>,
+        loader: async ({ params }) => await getIgdbGameMetadata(params.gameId as string || "")
       }
     ]
   }

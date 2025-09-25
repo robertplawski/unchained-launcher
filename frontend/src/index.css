@@ -5,6 +5,7 @@
 html{
   font-size:calc(0.8vmax + 1px);
   background-color:#000;
+  overflow: hidden
 }
 svg.lucide{
   width: 1.25rem;

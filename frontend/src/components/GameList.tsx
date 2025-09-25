@@ -147,7 +147,7 @@ const GameList: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col gap-5 min-w-[100vw] overflow-hidden p-6 px-13 ">
+    <div className="flex flex-col gap-5 min-w-[100vw] overflow-hidden p-6 px-13  pt-22">
       <h2
         className={`text-3xl font-bold transition-opacity ${currentIndex !== 0 ? "opacity-0" : "opacity-100"
           }`}
@@ -173,8 +173,8 @@ const GameList: React.FC = () => {
             />
           </div>
         ))}
-        <SeeLibraryCard 
-          selected={currentIndex == games.length} 
+        <SeeLibraryCard
+          selected={currentIndex == games.length}
           onClick={() => navigate("/search")}
         />
       </div>

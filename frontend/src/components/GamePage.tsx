@@ -1,61 +1,62 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useLoaderData } from 'react-router-dom';
 import type { GameInfo } from '../types';
+import { ChevronDown, LucideDownload, LucidePlay } from 'lucide-react';
+import { API_URL } from '../api';
+
+const InstallButton = ({ installed }: { installed?: boolean }) => {
+
+
+  return <div className='flex flex-col gap-2 max-w-[16rem]'>
+    <div className='flex flex-row'>
+      {!installed ?
+
+        <button className='px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-blue-500'>
+
+          <LucideDownload strokeWidth={3} />
+          Install
+
+        </button>
+        :
+
+        <button className='px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-green-500'>
+
+          <LucidePlay fill="white" strokeWidth={3} />
+          Play
+
+        </button>
+
+      }
+      <button className='cursor-pointer px-2 py-3 rounded-l-none rounded-sm font-bold flex flex-row items-center gap-4 bg-neutral-600'>
+        <ChevronDown fill="white" />
+      </button>
+    </div>
+    <div className="w-full bg-neutral-800 ">
+      <div className='h-[0.25rem] bg-blue-500 w-[80%]'></div>
+    </div>
+  </div>
+}
 
 const GamePage: React.FC = () => {
-  const { name } = useParams<{ name: string }>();
-  
-  // In a real implementation, you would fetch game data based on the name
-  // For now, we'll just display the name
-  const game: Partial<GameInfo> = {
-    name: name || 'Unknown Game',
-    metadata: {
-      summary: 'This is a placeholder summary for the game. In a real implementation, this would be fetched from an API or database.',
-      genres: ['Action', 'Adventure'],
-      platforms: ['PC', 'Mac'],
-    }
-  };
+  const game = useLoaderData<GameInfo>();
+  if (!game) {
+    return;
+  }
+  const { name } = game;
+  const installed = game.category == "library"
+
+  const artworks = installed ? game.metadata?.artworks : game.artworks
+  const artwork = (installed ? API_URL : "") + artworks?.[artworks?.length || 1 - 1]
 
   return (
-    <div className="p-4">
-      <div className="bg-gray-800 rounded-lg p-6">
-        <h1 className="text-3xl font-bold mb-4">{game.name}</h1>
-        
-        {game.metadata?.summary && (
-          <p className="text-gray-300 mb-6">{game.metadata.summary}</p>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {game.metadata?.genres && (
-            <div>
-              <h2 className="text-xl font-semibold mb-2">Genres</h2>
-              <ul className="list-disc list-inside">
-                {game.metadata.genres.map((genre, index) => (
-                  <li key={index} className="text-gray-300">{genre}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {game.metadata?.platforms && (
-            <div>
-              <h2 className="text-xl font-semibold mb-2">Platforms</h2>
-              <ul className="list-disc list-inside">
-                {game.metadata.platforms.map((platform, index) => (
-                  <li key={index} className="text-gray-300">{platform}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-        
-        <div className="mt-6">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            Play Game
-          </button>
-        </div>
+    <>
+      <img className='-z-100 w-[100vw] h-[30rem] object-[0%_25%] object-cover absolute top-0 left-0' src={artwork} />
+      <div className='w-[100vw] h-[30rem] top-0 left-0 absolute -z-100 bg-black/50'></div>
+      <p className='text-3xl font-bold p-10 mt-[19rem] absolute'>{name}</p>
+      <div className='bg-neutral-900 p-6 px-10 mt-[26.25rem] flex-1  w-full min-h-[100vh] text-lg'>
+        <InstallButton installed={installed} />
       </div>
-    </div>
+    </>
   );
 };
 

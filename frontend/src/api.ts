@@ -25,3 +25,8 @@ export const refreshGames = async () => {
   return res.data;
 };
 
+export const getIgdbGameMetadata = async (game_id: string): Promise<GameInfo> => {
+  const res = await axios.get(`${API_URL}/game/igdb/${game_id}`)
+  return res.data
+
+}

@@ -126,7 +126,7 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo, hi
   const navigate = useNavigate();
 
   const openGamePage = useCallback(() => {
-    navigate(`/${game.category}/` + game.name)
+    navigate(`/game/` + (game.category == "library" ? (game?.metadata?.id || game.id) : game.id))
   }, [game])
 
   if (big) {

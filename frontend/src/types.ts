@@ -30,10 +30,11 @@ export interface GameInfo {
   summary?: string;
   steam_id?: number;
   metadata?: {  // Make optional
+    id: number;
     cover?: string;
     big?: string;
     screenshots?: string[];  // Make optional
-    artworks?: string[];     // Make optional
+    artworks: string[];     // Make optional
     genres?: string[];
     platforms?: string[];
     first_release_date?: number;
