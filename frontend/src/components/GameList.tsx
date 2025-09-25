@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { fetchGames, launchGame } from "../api";
+import { fetchGames } from "../api";
 import { type GameInfo } from "../types";
 import GameCard from "./GameCard";
 import SeeLibraryCard from "./SeeLibraryCard";
+import { useNavigate } from "react-router";
 
 
 export function useArrowCounter(
@@ -19,23 +20,31 @@ export function useArrowCounter(
   }, [value]);
 
   useEffect(() => {
-    const isEditable = (el: Element | null) => {
-      if (!el) return false;
-      const tag = el.tagName.toLowerCase();
-      return (
-        tag === "input" ||
-        tag === "textarea" ||
-        tag === "select" ||
-        (el as HTMLElement).isContentEditable
-      );
+    const isEditable = (element: Element | null) => {
+      if (!element) return false;
+
+      // Check if it's a form element that can receive input
+      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT') {
+        return (element as HTMLInputElement).type !== 'checkbox' &&
+          (element as HTMLInputElement).type !== 'radio';
+      }
+
+      // Check for contenteditable
+      if ((element as HTMLElement).isContentEditable) return true;
+
+      // Check for contenteditable attribute
+      const contentEditable = element.getAttribute('contenteditable');
+      if (contentEditable === 'true' || contentEditable === '') return true;
+
+      return false;
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isEditable(document.activeElement)) return; // ignore if typing
 
-      if (e.key === "Enter") {
+      /*if (e.key === "Enter") {
         execute(valueRef.current);
-      }
+      }*/
 
       setValue((prev) => {
         if (e.key === "ArrowLeft") return Math.max(min, prev - 1);
@@ -76,17 +85,6 @@ const GameList: React.FC = () => {
 
 
 
-  const handleLaunch = async (index: number) => {
-    //const game = games[index]
-    try {
-      await launchGame(index);
-      //alert(`Launched game ${game.name}`)
-    } catch (err: any) {
-      //alert(err.response?.data?.detail || "Failed to launch");
-    } finally {
-    }
-  }
-
   const [currentIndex, setCurrentIndex] = useArrowCounter(0, games.length, (v: number) => handleLaunch(v));
 
 
@@ -121,6 +119,10 @@ const GameList: React.FC = () => {
     })
   }, [games, setCurrentIndex])
 
+  const navigate = useNavigate();
+  const handleLaunch = async (index: number) => {
+    navigate("/game/" + games[index].name)
+  };
   // scroll to the currently selected game whenever index changes
   useEffect(() => {
     const currentRef = gameRefs.current[currentIndex];

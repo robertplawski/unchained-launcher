@@ -125,14 +125,13 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) 
   const navigate = useNavigate();
 
   const openGamePage = useCallback(() => {
-    alert(JSON.stringify(game))
     navigate("/game/" + game.name)
   }, [game])
 
   if (big) {
     return <>
       <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
-      <div onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-194 w-194 ${!hideGameInfo ? 'pb-24' : ''}`}>
+      <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-194 w-194 ${!hideGameInfo ? 'pb-24' : ''}`}>
         <LazyLoadImage
 
           loading="lazy"
@@ -150,7 +149,7 @@ const GameCard: React.FC<Props> = ({ game, big, selected, last, hideGameInfo }) 
 
   return <>
     <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />
-    <div onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-60 w-60 ${!hideGameInfo ? 'pb-24' : ''}`}>
+    <div onDoubleClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-90 min-w-60 w-60 ${!hideGameInfo ? 'pb-24' : ''}`}>
       <LazyLoadImage
         loading="lazy"
         effect="blur"

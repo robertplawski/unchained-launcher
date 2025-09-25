@@ -21,10 +21,9 @@ export default function Header() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOnSearchPage) {
+      if (e.key === 'Escape') {
         // Remove query parameters from current location
-        const cleanPath = window.location.pathname;
-        navigate("/");
+        navigate(-1);
       }
     };
 
@@ -67,10 +66,9 @@ export default function Header() {
 
   // Handle input changes to update the state
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value
     setInputValue(e.target.value);
 
-    navigate(`/search?q=${encodeURIComponent(query)}`);
+    //navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
 

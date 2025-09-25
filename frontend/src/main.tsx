@@ -10,6 +10,7 @@ import MainLayout from './layouts/MainLayout.tsx';
 import GameList from './components/GameList.tsx';
 import SearchPage from './components/SearchPage.tsx';
 import AnimatedOutlet from './components/AnimatedOutlet.tsx';
+import GamePage from './components/GamePage.tsx';
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       {
         path: "/search",
         element: <AnimatedOutlet><SearchPage /></AnimatedOutlet>
+      },
+      {
+        path: "/game/:name",
+        element: <AnimatedOutlet><GamePage /></AnimatedOutlet>
       }
     ]
   }

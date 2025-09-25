@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import GameCard from './GameCard';
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { GameInfo } from '../types';
 import { fetchGames, searchGames } from '../api';
 
@@ -38,7 +38,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [games, setGames] = useState<GameInfo[]>([]);
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [_isSearching, setIsSearching] = useState<boolean>(false);
 
 
   const loadGames = useCallback(async () => {
@@ -105,7 +105,7 @@ export default function SearchPage() {
             <CategoryButton
               key={category}
               name={category}
-              count={100}
+              count={displayedGames.length}
               selected={selectedCategory === category}
               onClick={() => handleCategorySelect(category)}
             />
