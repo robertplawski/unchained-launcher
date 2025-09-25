@@ -113,6 +113,7 @@ def process_game_metadata(game_data):
         "cover": cover_url,
         "screenshots": screenshots,
         "artworks": artworks,
+        "category":"bay",
         "steam_id": steam_id
     }
 
@@ -165,6 +166,8 @@ def search_igdb_games(query: str, limit: int):
     import difflib
     games = resp.json()
     games = [g for g in games if 'rating' in g and g['rating'] is not None]
+ 
+
    
     games = sorted(
         games,
@@ -434,6 +437,7 @@ def search_flatpak_apps(query: str, limit: int) -> Dict[str, Any]:
                 'id': item.get('id'),
                 'name': item.get('name'),
                 'appid': item.get('app_id'),
+                'category':'apps',
                 'exes': [],  # Flatpak apps don't have traditional EXEs
                 'metadata': metadata,
                 'size': 0.0  # Size not available from search API
