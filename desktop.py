@@ -1,3 +1,4 @@
+import sys
 import time
 import os
 import webview
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 # --- CONFIG ---
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+VERSION = "0.0.11"  
 
 def get_port_from_env(env_name: str = "PORT", default: int = 8000) -> int:
     """Read port from environment, validate, and return an int port.
@@ -34,15 +36,19 @@ PORT = get_port_from_env("PORT", 8000)
 BACKEND_URL = f"http://localhost:{PORT}?nocache={random.randint(0,100000)}"
 
 def run_server():
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=PORT)
 
 def main():
+    # Check for --version argument
+    if "--version" in sys.argv:
+        print(f"Unchained Launcher version {VERSION}")
+        sys.exit(0)
+
     # Start the FastAPI server in a separate thread
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
     
     # Give the server a moment to start
-    import time
     time.sleep(3)
 
     # WebKit settings
@@ -57,7 +63,6 @@ def main():
 
     # Start webview GUI
     webview.start(debug=False)  # Set debug to False for production
-
 
 if __name__ == "__main__":
     main()
