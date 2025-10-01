@@ -1,4 +1,5 @@
 import sys
+import platform
 import time
 import os
 import webview
@@ -36,7 +37,7 @@ PORT = get_port_from_env("PORT", 8000)
 BACKEND_URL = f"http://localhost:{PORT}?nocache={random.randint(0,100000)}"
 
 def run_server():
-    uvicorn.run(app, host="127.0.0.1", port=PORT)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
 
 def main():
     # Check for --version argument
@@ -61,8 +62,17 @@ def main():
     # Create webview window
     window = webview.create_window("Unchained Launcher", BACKEND_URL)
 
+    gui_backend = "cef"   # CEF on Linux/macOS
+    
+    if platform.system() == "Windows":
+        gui_backend = "edgechromium"  
+
+    debug = False
+    if os.getenv("DEBUG") == "1": 
+        debug = True
+
     # Start webview GUI
-    webview.start(debug=False)  # Set debug to False for production
+    webview.start(gui=gui_backend,debug=debug)  # Set debug to False for production
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@ cd frontend
 npm run dev &
 cd ..
 
-export PORT=5173 && python desktop.py
+export PORT=5173 && export DEBUG=1 && python desktop.py
 #uvicorn \
 #  --reload \
 #  --host 127.0.0.1 \
