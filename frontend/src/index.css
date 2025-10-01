@@ -2,7 +2,9 @@
 @theme {
   --default-transition-duration: 250ms;
 }
-html{
+/* Apply smooth scrolling globally to the entire document */
+html {
+  scroll-behavior: smooth;
   font-size:calc(0.8vmax + 1px);
   background-color:#000;
   overflow: hidden
@@ -11,4 +13,24 @@ svg.lucide{
   width: 1.25rem;
   height: 1.25rem;
 }
+/* Add this CSS to your global styles or component-specific styles */
+.focusable-item-focused {
+  /* Remove the default browser outline */
+  outline: none;
+  /* Define the initial state of the box-shadow (no glow) */
+  box-shadow: 0 0 0 2px transparent;
+  /* Apply a smooth transition for the box-shadow property */
+  transition: all 0.3s ease-in-out;
+  
+}
 
+
+.focusable-item-focused:focus {
+  /* Define the box-shadow when focused - this creates the animated outline */
+  box-shadow: 0 0 0 2px white; /* Adjust color as needed */
+}
+
+.focusable-item-focused.inset:focus{
+
+  box-shadow: 0 0 0 2px inset white; /* Adjust color as needed */
+}

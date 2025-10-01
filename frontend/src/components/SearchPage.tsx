@@ -1,9 +1,10 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import GameCard from './GameCard';
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, type Ref } from 'react';
 import type { AllSearchGamesType, GameInfo, SearchResultCategory } from '../types';
 import { fetchGames, searchGames } from '../api';
 import { Loader2 } from 'lucide-react';
+import FocusableItem, { type FocusableItemHandle } from './FocusableItem';
+import { useSearchParams } from 'react-router';
 
 const categories: SearchResultCategory[] = ["all", "library", "bay", "peers", "apps"];
 
@@ -11,112 +12,56 @@ function CategoryButton({
   name,
   count,
   selected,
-  onClick
+  onClick,
+  query,
+  ref
 }: {
+  query: string,
+  ref?: Ref<FocusableItemHandle>,
   name: string,
   count: number,
   selected: boolean,
   onClick: () => void
 }) {
-  return <button
-    onClick={onClick}
+
+
+
+  /*useEffect(() => {
+    if (!focusableItemRef.current) {
+      return;
+    }
+    focusableItemRef.current.focus();
+  }, [
+    focusableItemRef
+  ])*/
+
+  return <FocusableItem focus={name == "all" + (query ? "" : "")} ref={ref} onClick={onClick} onSelect={onClick}
     className={`flex flex-row gap-2 p-3 px-6 ${selected ? 'bg-neutral-700' : ''} transition-[background] hover:bg-neutral-700/80 font-bold cursor-pointer uppercase rounded-full`}
   >
     <span>{name}</span>
     <span className='text-neutral-400'>{count}</span>
-  </button>
+  </FocusableItem>
 }
 
-export function useArrowCounter(
-  min: number = 0,
-  max: number = 4,
-  execute: (value: number) => void
-) {
-  const [value, setValue] = useState<number>(min);
-  const valueRef = useRef(value);
-
-  // Keep ref updated
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
-
-  useEffect(() => {
-    const isEditable = (element: Element | null) => {
-      if (!element) return false;
-
-      // Check if it's a form element that can receive input
-      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT') {
-        return (element as HTMLInputElement).type !== 'checkbox' &&
-          (element as HTMLInputElement).type !== 'radio';
-      }
-
-      // Check for contenteditable
-      if ((element as HTMLElement).isContentEditable) return true;
-
-      // Check for contenteditable attribute
-      const contentEditable = element.getAttribute('contenteditable');
-      if (contentEditable === 'true' || contentEditable === '') return true;
-
-      return false;
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const targetElement = e.target as Element;
-
-      if (isEditable(targetElement)) {
-        return; // ignore if typing
-      }
-
-      if (e.key === "Enter") {
-        execute(valueRef.current);
-      }
-
-      setValue((prev) => {
-        if (e.key === "ArrowLeft") return Math.max(min, prev - 1);
-        if (e.key === "ArrowRight") return Math.min(max, prev + 1);
-        return prev;
-      });
-    };
-
-    /*const _handleWheel = (e: WheelEvent) => {
-      if (isEditable(document.activeElement)) return;
-
-      const threshold = 100;
-
-      setValue((prev) => {
-        if (e.deltaY < -threshold) return Math.min(max, prev + 1);
-        if (e.deltaY > threshold) return Math.max(min, prev - 1);
-        return prev;
-      });
-    };*/
-
-    window.addEventListener("keydown", handleKeyDown);
-    //window.addEventListener("wheel", handleWheel);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      //window.removeEventListener("wheel", handleWheel);
-    };
-  }, [min, max, execute]);
-
-  return [value, setValue] as const;
-}
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
-  const selectedCategory = (searchParams.get('category') || 'all') as SearchResultCategory;
+  const [selectedCategory, setSelectedCategory] = useState<SearchResultCategory>('all'); //(searchParams.get('category') || 'all') as SearchResultCategory;
 
-  const navigate = useNavigate();
 
-  const handleCategorySelect = useCallback((category: string) => {
-    setSearchParams({ q: query, category });
-  }, [query, setSearchParams]);
+  const categoryFocusableItemRef = useRef<FocusableItemHandle>(null);
+  console.log(categoryFocusableItemRef)
+
+  const handleCategorySelect = useCallback((category: SearchResultCategory) => {
+    setSelectedCategory(category)
+  }, [query, setSearchParams, categoryFocusableItemRef.current]);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [_games, setGames] = useState<GameInfo[]>([]);
   const [searchResults, setSearchResults] = useState<AllSearchGamesType | null>(null);
   const [_isSearching, setIsSearching] = useState<boolean>(false);
+
 
   const loadGames = useCallback(async () => {
     setLoading(true);
@@ -159,7 +104,8 @@ export default function SearchPage() {
 
   useEffect(() => {
     handleSearch(query);
-  }, [query, selectedCategory, loadGames, handleSearch]);
+  }, [query, loadGames, handleSearch]);
+
 
   // Only show loading when initially loading games (not when searching)
   const showLoading = loading && !query;
@@ -171,41 +117,7 @@ export default function SearchPage() {
 
   const displayedGames = displayedGamesData?.games || [];
 
-  // Arrow navigation
-  const [currentIndex, setCurrentIndex] = useArrowCounter(
-    0,
-    Math.max(0, displayedGames.length - 1),
-    (v: number) => {
-      if (v === displayedGames.length) {
-        // "View more in your lirary" card is selected
-        handleSeeLibrary();
-      } else {
-        handleLaunch(v);
-      }
-    }
-  );
-
-  const gameRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Update refs when games change
-  useEffect(() => {
-    gameRefs.current = gameRefs.current.slice(0, displayedGames.length);
-
-    gameRefs.current.forEach((ref, index) => {
-      if (ref) {
-        const handleClick = () => {
-          setCurrentIndex(index);
-        };
-        ref.removeEventListener('click', handleClick);
-        ref.addEventListener('click', handleClick);
-      }
-    });
-
-    // Reset current index when games change
-    setCurrentIndex(0);
-  }, [displayedGames, setCurrentIndex]);
-
-  const handleLaunch = async (index: number) => {
+  /*const handleLaunch = async (index: number) => {
     if (index === displayedGames.length) {
       // "View more in your library" card is selected
       navigate("/search");
@@ -216,22 +128,10 @@ export default function SearchPage() {
     }
   };
 
-  // Scroll to the currently selected game whenever index changes
-  useEffect(() => {
-    const currentRef = gameRefs.current[currentIndex];
-    if (currentRef) {
-      currentRef.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
-  }, [currentIndex]);
-
   // Handle the "View more in your library" card
   const handleSeeLibrary = () => {
     navigate("/search");
-  };
+  };*/
 
   // Helper function to safely get a property value
   const getPropertyValue = (primary?: string, secondary?: string) => {
@@ -249,10 +149,11 @@ export default function SearchPage() {
     < >
 
       <div className="max-h-screen overflow-y-auto pt-16">
-        <div className='sticky top-0 z-10 py-4 flex flex-row flex-wrap justify-center items-center gap-2 bg-black/80 shadow-lg backdrop-blur-lg'>
+        <div className='sticky -translate-y-2 top-0 z-10 py-4 flex flex-row flex-wrap justify-center items-center gap-2 bg-black/80 shadow-lg backdrop-blur-lg'>
 
           {categories.map((category) => (
             <CategoryButton
+              query={query}
               key={category}
               name={category}
               count={searchResults?.[category]?.count || 0}
@@ -268,7 +169,7 @@ export default function SearchPage() {
               <Loader2 className='animate-spin ' />
             </div>
           ) : displayedGames.length === 0 ? (
-            <p className='h-[100vh]'>No games/apps found...</p>
+            <p>No games/apps found...</p>
           ) : (
             <div className=' flex items-center justify-center w-full'>
               <div className="grid grid-cols-[repeat(2,1fr)] sm:grid-cols-[repeat(3,1fr)] md:grid-cols-[repeat(5,1fr)] lg:grid-cols-[repeat(6,1fr)] gap-8 pb-16">
@@ -276,14 +177,12 @@ export default function SearchPage() {
                   <div
                     className='col-span-1'
                     key={`${game.id}-${game.name}-${index}`}
-                    ref={(el) => {
-                      gameRefs.current[index] = el;
-                    }}
+
                   >
                     <GameCard
+                      index={index}
                       hideGameArtwork={true}
                       hideGameInfo={true}
-                      selected={currentIndex === index}
                       game={game.category == "library" ? game : {
                         category: game.category,
                         id: game.id,

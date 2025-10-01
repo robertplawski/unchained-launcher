@@ -1,40 +1,53 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLoaderData } from 'react-router-dom';
 import type { GameInfo } from '../types';
 import { ChevronDown, LucideDownload, LucidePlay } from 'lucide-react';
 import { API_URL } from '../api';
+import FocusableItem, { type FocusableItemHandle } from './FocusableItem';
 
 const InstallButton = ({ installed }: { installed?: boolean }) => {
 
+  const focusableItemRef = useRef<FocusableItemHandle>(null);
+
+
+  useEffect(() => {
+
+    if (!focusableItemRef.current) {
+      return
+    }
+    focusableItemRef.current.focus();
+  }, [focusableItemRef])
 
   return <div className='flex flex-col gap-2 max-w-[16rem]'>
     <div className='flex flex-row'>
       {!installed ?
-
-        <button className='px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-blue-500'>
+        <FocusableItem className='inset px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-blue-500' ref={focusableItemRef}>
 
           <LucideDownload strokeWidth={3} />
           Install
 
-        </button>
+
+        </FocusableItem>
         :
 
-        <button className='px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-green-500'>
+        <FocusableItem ref={focusableItemRef} className='inset px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-green-500'>
+
 
           <LucidePlay fill="white" strokeWidth={3} />
           Play
 
-        </button>
+        </FocusableItem>
 
       }
-      <button className='cursor-pointer px-2 py-3 rounded-l-none rounded-sm font-bold flex flex-row items-center gap-4 bg-neutral-600'>
+      <FocusableItem className='inset cursor-pointer px-2 py-3 rounded-l-none rounded-sm font-bold flex flex-row items-center gap-4 bg-neutral-600'>
         <ChevronDown fill="white" />
-      </button>
+      </FocusableItem>
     </div>
-    <div className="w-full bg-neutral-800 ">
+    <div className="hidden w-full bg-neutral-800 ">
       <div className='h-[0.25rem] bg-blue-500 w-[80%]'></div>
     </div>
   </div>
+
 }
 
 const GamePage: React.FC = () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { type GameInfo } from "../types";
 import { API_URL } from "../api";
 import { LucideDownload, LucidePlay } from "lucide-react";
@@ -131,7 +131,7 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
 
 
   // Add state to track the focused state
-  const [selected, setIsSelected] = useState(false);
+  const [selected, setIsSelected] = useState(true);
 
   // Use useEffect to sync the ref's focus state
   useEffect(() => {
@@ -154,7 +154,7 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
   if (big) {
     return <>
       {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
-      <FocusableItem ref={focusableItemRef} focus={index == 0} onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 h-80 aspect-[1920/976]`}>
+      <FocusableItem focus={true} ref={focusableItemRef} onClick={openGamePage} className={` cursor-pointer relative flex flex-col justify-between gap-0 h-80 aspect-[1920/897]`}>
         <LazyLoadImage
 
           loading="lazy"
@@ -176,13 +176,8 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
 
   return <>
     {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
-    <FocusableItem ref={focusableItemRef} focus={index == 0} onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-80 min-w-60 w-60 `}>
-      <img
-        src={cachedLowResImageUrl}
-        className={`hidden absolute object-contain min-h-80 h-90 flex-1 transition-[scale,border,opacity] blur-lg ${selected ? 'opacity-80' : 'opacity-0'}  `}
-        width="100%"
-        height="auto"
-      />
+    <FocusableItem ref={focusableItemRef} onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-80 min-w-60 w-60 `}>
+
       <LazyLoadImage
         loading="lazy"
         effect="blur"
@@ -192,7 +187,12 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
 
 
       />
-
+      <img
+        src={cachedLowResImageUrl}
+        className={`absolute object-contain min-h-80 scale-[1.05] h-90 flex-1 transition-[scale,border,opacity] blur-lg ${selected ? 'opacity-80' : 'opacity-0'}  -z-10 `}
+        width="100%"
+        height="auto"
+      />
       {!hideGameInfo && <GameInfo {...{ game, selected }} />}
     </FocusableItem >
   </>
