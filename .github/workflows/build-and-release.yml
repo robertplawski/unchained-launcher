@@ -52,22 +52,14 @@ jobs:
       - name: Build (runs build.py)
         run: python build.py
 
-      - name: List frontend dist
-        run: ls -la frontend/dist
-
       - name: Smoke test
         run: ./dist/UnchainedLauncher --version
 
-      - name: Create Linux artifact (zip)
-        run: |
-          cp -r dist/UnchainedLauncher ./UnchainedLauncher-linux
-          zip -r unchainedlauncher-linux-${{ github.ref_name }}.zip UnchainedLauncher-linux
-
-      - name: Upload artifact (for debugging)
+      - name: Upload Linux binary
         uses: actions/upload-artifact@v4.3.0
         with:
           name: unchainedlauncher-linux
-          path: unchainedlauncher-linux-${{ github.ref_name }}.zip
+          path: dist/UnchainedLauncher
 
   build-windows:
     name: Build (Windows)
@@ -94,10 +86,6 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Ensure npm is on PATH (diagnose)
-        run: |
-          where npm
-
       - name: Build (runs build.py)
         shell: pwsh
         run: python build.py
@@ -106,30 +94,24 @@ jobs:
         shell: pwsh
         run: .\dist\UnchainedLauncher.exe --version
 
-      - name: Package Windows exe
-        shell: pwsh
-        run: |
-          Copy-Item "dist\UnchainedLauncher.exe" ".\UnchainedLauncher.exe" -Force
-          Compress-Archive -Path .\UnchainedLauncher.exe -DestinationPath "unchainedlauncher-windows-${{ github.ref_name }}.zip" -Force
-
-      - name: Upload artifact (for debugging)
+      - name: Upload Windows binary
         uses: actions/upload-artifact@v4.3.0
         with:
           name: unchainedlauncher-windows
-          path: unchainedlauncher-windows-${{ github.ref_name }}.zip
+          path: dist/UnchainedLauncher.exe
 
   publish-release:
     name: Publish Release and Attach Artifacts
     needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
     steps:
-      - name: Download Linux artifact
+      - name: Download Linux binary
         uses: actions/download-artifact@v4.2.0
         with:
           name: unchainedlauncher-linux
           path: downloads
 
-      - name: Download Windows artifact
+      - name: Download Windows binary
         uses: actions/download-artifact@v4.2.0
         with:
           name: unchainedlauncher-windows
@@ -142,7 +124,8 @@ jobs:
           name: ${{ github.ref_name }}
           body: "Release ${{ github.ref_name }} - built by CI"
           files: |
-            downloads/*.zip
+            downloads/UnchainedLauncher      # Linux binary
+            downloads/UnchainedLauncher.exe  # Windows binary
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
