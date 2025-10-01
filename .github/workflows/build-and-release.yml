@@ -87,7 +87,7 @@ jobs:
       - name: Package Windows exe
         run: |
           New-Item -ItemType Directory -Force -Path release
-          Copy-Item "dist\UnchainedLauncher\UnchainedLauncher.exe" "release\UnchainedLauncher.exe" -Force
+          Copy-Item "dist\UnchainedLauncher.exe" "release\UnchainedLauncher.exe" -Force
           Compress-Archive -Path release\* -DestinationPath "release\unchainedlauncher-windows-${{ github.ref_name }}.zip" -Force
 
       - name: Upload artifact (for debugging)
