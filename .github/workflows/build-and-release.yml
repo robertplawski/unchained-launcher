@@ -46,7 +46,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install Node dependencies
-        run: npm install
+        run: |
+          cd frontend
+          npm run build   
 
       - name: Build (runs build.py)
         run: python build.py
@@ -70,12 +72,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Python dependencies
         run: |
@@ -83,7 +85,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install Node dependencies
-        run: npm install 
+        run: |
+          cd frontend
+          npm install
 
       - name: Build (runs build.py)
         shell: pwsh
