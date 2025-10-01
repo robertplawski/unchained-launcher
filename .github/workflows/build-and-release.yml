@@ -117,8 +117,8 @@ jobs:
           name: ${{ github.ref_name }}
           body: "Release ${{ github.ref_name }} - built by CI"
           files: |
-            downloads/UnchainedLauncher      # Linux binary
-            downloads/UnchainedLauncher.exe  # Windows binary
+            downloads/UnchainedLauncher
+            downloads/UnchainedLauncher.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
