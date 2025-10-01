@@ -1,11 +1,11 @@
 import GameCard from './GameCard';
-import { useEffect, useState, useCallback, useMemo, useRef, type Ref } from 'react';
-import type { AllSearchGamesType, GameInfo, SearchResultCategory } from '../types';
-import { fetchGames, searchGames } from '../api';
+import { useState, useCallback, useMemo, useRef, type Ref } from 'react';
+import type { AllSearchGamesType, SearchResultCategory } from '../types';
 import { Loader2 } from 'lucide-react';
 import FocusableItem, { type FocusableItemHandle } from './FocusableItem';
-import { useSearchParams } from 'react-router';
+import { useNavigation, useSearchParams } from 'react-router';
 
+import { useLoaderData } from "react-router";
 const categories: SearchResultCategory[] = ["all", "library", "bay", "peers", "apps"];
 
 function CategoryButton({
@@ -26,14 +26,6 @@ function CategoryButton({
 
 
 
-  /*useEffect(() => {
-    if (!focusableItemRef.current) {
-      return;
-    }
-    focusableItemRef.current.focus();
-  }, [
-    focusableItemRef
-  ])*/
 
   return <FocusableItem focus={name == "all" + (query ? "" : "")} ref={ref} onClick={onClick} onSelect={onClick}
     className={`flex flex-row gap-2 p-3 px-6 ${selected ? 'bg-neutral-700' : ''} transition-[background] hover:bg-neutral-700/80 font-bold cursor-pointer uppercase rounded-full`}
@@ -51,87 +43,25 @@ export default function SearchPage() {
 
 
   const categoryFocusableItemRef = useRef<FocusableItemHandle>(null);
-  console.log(categoryFocusableItemRef)
 
   const handleCategorySelect = useCallback((category: SearchResultCategory) => {
     setSelectedCategory(category)
   }, [query, setSearchParams, categoryFocusableItemRef.current]);
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [_games, setGames] = useState<GameInfo[]>([]);
-  const [searchResults, setSearchResults] = useState<AllSearchGamesType | null>(null);
-  const [_isSearching, setIsSearching] = useState<boolean>(false);
+  const games = useLoaderData<AllSearchGamesType>();
+  const navigation = useNavigation();
 
+  const { state } = navigation;
 
-  const loadGames = useCallback(async () => {
-    setLoading(true);
-    try {
-      console.log('Fetching games...'); // Debug log
-      const data = await fetchGames();
-      console.log('Games fetched:', data.length); // Debug log
-
-      setGames(data);
-    } catch (error) {
-      console.error('Failed to load games:', error);
-      setGames([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const handleSearch = useCallback(async (searchQuery: string) => {
-    /*if (!searchQuery.trim()) {
-      setSearchResults(null);
-      setIsSearching(false);
-      return;
-    }*/
-
-    setIsSearching(true);
-
-    try {
-      console.log('Searching for:', searchQuery, 'in category:', selectedCategory); // Debug log
-      const results = await searchGames(searchQuery);
-      console.log('Search results:', results); // Debug log
-
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Search failed:', error);
-      setSearchResults(null);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    handleSearch(query);
-  }, [query, loadGames, handleSearch]);
-
-
-  // Only show loading when initially loading games (not when searching)
-  const showLoading = loading && !query;
+  const loading = state === "loading" || state === "submitting"
 
   const displayedGamesData = useMemo(() => {
-    if (!searchResults) return null;
-    return searchResults[selectedCategory];
-  }, [searchResults, selectedCategory]);
+    if (!games) return null;
+    return games[selectedCategory];
+  }, [games, selectedCategory]);
 
   const displayedGames = displayedGamesData?.games || [];
 
-  /*const handleLaunch = async (index: number) => {
-    if (index === displayedGames.length) {
-      // "View more in your library" card is selected
-      navigate("/search");
-    } else {
-      const game = displayedGames[index]
-      const goodid = game.category == "library" ? (game.metadata?.id || 4) : game.id
-      navigate("/game/" + goodid)
-    }
-  };
-
-  // Handle the "View more in your library" card
-  const handleSeeLibrary = () => {
-    navigate("/search");
-  };*/
 
   // Helper function to safely get a property value
   const getPropertyValue = (primary?: string, secondary?: string) => {
@@ -156,7 +86,7 @@ export default function SearchPage() {
               query={query}
               key={category}
               name={category}
-              count={searchResults?.[category]?.count || 0}
+              count={games?.[category]?.count || 0}
               selected={selectedCategory === category}
               onClick={() => handleCategorySelect(category)}
             />
@@ -164,7 +94,7 @@ export default function SearchPage() {
         </div>
 
         <div className='p-4 pb-24 '>
-          {showLoading || _isSearching ? (
+          {loading ? (
             <div className="text-center py-8 w-full justify-center flex">
               <Loader2 className='animate-spin ' />
             </div>

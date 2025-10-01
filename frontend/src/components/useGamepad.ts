@@ -1,118 +1,99 @@
 import { useEffect } from "react";
 
-type KeyName = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | "Enter";
-
+type KeyName = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | "Enter" | "Escape";
 interface KeyState {
   ArrowUp: boolean;
   ArrowDown: boolean;
   ArrowLeft: boolean;
   ArrowRight: boolean;
   Enter: boolean;
+  Escape: boolean;
 }
 
-function createKeyboardEvent(type: string, key: string, keyCode = 0, code = key): Event {
-  // Preferred modern constructor
+function makeKeyboardEvent(type: string, key: string, keyCode = 0, code = key): KeyboardEvent {
+  const ev = new KeyboardEvent(type, {
+    key,
+    code,
+    keyCode,
+    which: keyCode,
+    bubbles: true,
+    cancelable: true,
+    composed: true
+  });
+
   try {
-    const ev = new KeyboardEvent(type, {
-      key,
-      code,
-      keyCode,
-      which: keyCode,
-      bubbles: true,
-      cancelable: true,
-      composed: true
-    });
-
-    // Ensure read-only props are accessible to older listeners
-    try {
-      Object.defineProperty(ev, "keyCode", { get: () => keyCode });
-      Object.defineProperty(ev, "which", { get: () => keyCode });
-      Object.defineProperty(ev, "key", { get: () => key });
-      Object.defineProperty(ev, "code", { get: () => code });
-    } catch (err) { }
-
-    return ev;
-  } catch (e) { }
-
-  // Older fallback (some browsers)
-  try {
-    const ev: any = document.createEvent("KeyboardEvent");
-    const initMethod = typeof ev.initKeyboardEvent !== "undefined" ? "initKeyboardEvent" : "initKeyEvent";
-    if (initMethod === "initKeyboardEvent") {
-      try { ev.initKeyboardEvent(type, true, true, window, key, 0, "", false, ""); } catch (_) {
-        try { ev.initKeyboardEvent(type, true, true, window, key, 0, "", false); } catch (_) { }
-      }
-    } else {
-      try { ev.initKeyEvent(type, true, true, window, false, false, false, false, keyCode, 0); } catch (_) { }
-    }
-    try {
-      Object.defineProperty(ev, "keyCode", { get: () => keyCode });
-      Object.defineProperty(ev, "which", { get: () => keyCode });
-      Object.defineProperty(ev, "key", { get: () => key });
-      Object.defineProperty(ev, "code", { get: () => code });
-    } catch (_) { }
-    return ev as Event;
+    Object.defineProperty(ev, "keyCode", { get: () => keyCode });
+    Object.defineProperty(ev, "which", { get: () => keyCode });
+    Object.defineProperty(ev, "key", { get: () => key });
+    Object.defineProperty(ev, "code", { get: () => code });
   } catch (_) { }
 
-  // Last resort
-  return new CustomEvent(type, { bubbles: true, detail: { key, code, keyCode } });
-}
-
-function dispatchKeySequence(target: Element | Document | null | undefined, key: string, keyCode = 0): boolean {
-  const t: any = target ?? (document.activeElement as Element | null) ?? document.body ?? document;
-
-  // Ensure element is focusable and focused
-  try {
-    if (t !== document && t !== document.body && typeof t.focus === "function") {
-      t.focus({ preventScroll: true });
-    } else {
-      // ensure some element is focused
-      if (document.activeElement === document.body && document.body.tabIndex === -1) {
-        document.body.tabIndex = 0;
-      }
-      document.body.focus({ preventScroll: true });
-    }
-  } catch (_) { }
-
-  function send(type: string) {
-    const ev = createKeyboardEvent(type, key, keyCode);
-    try { return t.dispatchEvent(ev); } catch (_) { return false; }
-  }
-
-  // Keydown
-  send("keydown");
-  // Many handlers expect keypress for printable/Enter keys
-  send("keypress");
-  // Keyup after slight delay to allow handlers that measure keydown duration
-  setTimeout(() => send("keyup"), 40);
-  return true;
-}
-
-function dispatchSingle(type: string, key: string, keyCode = 0, target: Element | Document | null | undefined = null): boolean {
-  const t: any = target ?? (document.activeElement as Element | null) ?? document.body ?? document;
-  // Ensure focused as above
-  try {
-    if (t !== document && t !== document.body && typeof t.focus === "function") t.focus({ preventScroll: true });
-    else document.body.focus({ preventScroll: true });
-  } catch (_) { }
-  const ev = createKeyboardEvent(type, key, keyCode);
-  try { t.dispatchEvent(ev); return true; } catch (_) { return false; }
+  return ev;
 }
 
 export function useGamepad(): void {
   useEffect(() => {
     let running = true;
-    const lastState: KeyState = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, Enter: false };
+    const lastState: KeyState = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, Enter: false, Escape: false };
 
-    function arrowKeyCode(keyName: KeyName): number {
+    // Track per-key active target so keyup goes to same element that got keydown
+    const activeTargets: Partial<Record<KeyName, { target: Element | Document; }>> = {};
+
+    function arrowKeyCode(keyName: KeyName | "Escape"): number {
       switch (keyName) {
         case "ArrowUp": return 38;
         case "ArrowDown": return 40;
         case "ArrowLeft": return 37;
         case "ArrowRight": return 39;
         case "Enter": return 13;
+        case "Escape": return 27;
         default: return 0;
       }
+    }
+
+    function getTarget(): Element | Document {
+      const t: any = (document.activeElement as Element | null) ?? document;
+      // Ensure focusable
+      try {
+        if (t !== document && t !== document.body && typeof t.focus === "function") t.focus({ preventScroll: true });
+        else document.body.focus({ preventScroll: true });
+      } catch (_) { }
+      return t;
+    }
+
+    function sendKeyboard(type: string, key: string, keyCode = 0, target: Element | Document) {
+      const ev = makeKeyboardEvent(type, key, keyCode, key);
+      try {
+        (target as any).dispatchEvent(ev);
+      } catch (err) {
+        console.error("[useGamepad] dispatch error", err);
+      }
+    }
+
+    function pressKey(key: KeyName) {
+      // if already pressed, do nothing
+      if (lastState[key]) return;
+      const target = getTarget();
+      activeTargets[key] = { target };
+      const code = arrowKeyCode(key);
+      console.info(`[useGamepad] PRESS detected: ${key} target=`, target);
+      // keydown
+      sendKeyboard("keydown", key, code, target);
+      // keypress for Enter (and historically printable keys)
+      if (key === "Enter") sendKeyboard("keypress", "Enter", code, target);
+      // keep lastState updated here; keyup will clear it
+      lastState[key] = true;
+    }
+
+    function releaseKey(key: KeyName) {
+      if (!lastState[key]) return;
+      const entry = activeTargets[key];
+      const target = entry?.target ?? getTarget();
+      const code = arrowKeyCode(key);
+      console.info(`[useGamepad] RELEASE detected: ${key} target=`, target);
+      sendKeyboard("keyup", key, code, target);
+      lastState[key] = false;
+      delete activeTargets[key];
     }
 
     function sampleGamepad(): Gamepad | null {
@@ -126,7 +107,7 @@ export function useGamepad(): void {
     }
 
     function processGamepad(g: Gamepad | null): KeyState {
-      const state: KeyState = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, Enter: false };
+      const state: KeyState = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, Enter: false, Escape: false };
       if (!g) return state;
 
       const b: readonly GamepadButton[] = g.buttons ?? [];
@@ -146,45 +127,41 @@ export function useGamepad(): void {
         if ((a[1] || 0) >= 0.5) state.ArrowDown = true;
       }
 
+      // Map A (button 0) -> Enter, B (button 1) -> Escape
       if (b[0]?.pressed) state.Enter = true;
+      if (b[1]?.pressed) state.Escape = true;
+
       return state;
     }
 
     function emitTransitions(state: KeyState) {
       (Object.keys(state) as KeyName[]).forEach((key) => {
         if (state[key] && !lastState[key]) {
-          // Pressed now
-          if (key === "Enter") {
-            console.debug("[useGamepad] dispatch Enter press sequence");
-            dispatchKeySequence(document.activeElement, "Enter", 13);
-          } else {
-            console.debug("[useGamepad] dispatch keydown", key);
-            dispatchSingle("keydown", key, arrowKeyCode(key), document.activeElement);
-          }
+          // press
+          pressKey(key);
         } else if (!state[key] && lastState[key]) {
-          // Released now
-          if (key === "Enter") {
-            console.debug("[useGamepad] dispatch Enter keyup");
-            dispatchSingle("keyup", key, 13, document.activeElement);
-          } else {
-            console.debug("[useGamepad] dispatch keyup", key);
-            dispatchSingle("keyup", key, arrowKeyCode(key), document.activeElement);
-          }
+          // release
+          releaseKey(key);
         }
-        lastState[key] = state[key];
       });
     }
 
     function loop() {
       if (!running) return;
       const g = sampleGamepad();
-      emitTransitions(processGamepad(g));
+      if (g) {
+        emitTransitions(processGamepad(g));
+      } else {
+        // if no gamepad, release all keys to avoid stuck state
+        (Object.keys(lastState) as KeyName[]).forEach((k) => {
+          if (lastState[k]) releaseKey(k);
+        });
+      }
       requestAnimationFrame(loop);
     }
 
     function onConnect(e: GamepadEvent) {
       console.info("[useGamepad] connected", e.gamepad.id);
-      console.debug("[useGamepad] raw gamepad", e.gamepad);
     }
     function onDisconnect(_e: GamepadEvent) {
       console.info("[useGamepad] disconnected");
@@ -193,11 +170,18 @@ export function useGamepad(): void {
     window.addEventListener("gamepadconnected", onConnect as EventListener);
     window.addEventListener("gamepaddisconnected", onDisconnect as EventListener);
 
-    // Start loop and do an initial immediate poll
     requestAnimationFrame(loop);
 
     return () => {
       running = false;
+      // release any pressed keys
+      (Object.keys(lastState) as KeyName[]).forEach((k) => {
+        if (lastState[k]) {
+          const entry = activeTargets[k];
+          const target = entry?.target ?? document;
+          sendKeyboard("keyup", k, arrowKeyCode(k), target);
+        }
+      });
       window.removeEventListener("gamepadconnected", onConnect as EventListener);
       window.removeEventListener("gamepaddisconnected", onDisconnect as EventListener);
     };

@@ -60,31 +60,26 @@ export default function Header() {
     };
   }, []);
 
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const query = e.currentTarget.value.trim();
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault?.();
 
-      // Get current URL and parse existing parameters
-      const currentUrl = new URL(window.location.href);
-      const currentParams = new URLSearchParams(currentUrl.search);
-
-      if (query) {
-        // Update only the query parameter, keep others
-        currentParams.set('q', query);
-      } else {
-        // Remove query parameter if empty, keep others
-        currentParams.delete('q');
-      }
-
-      // Build new URL with updated parameters - go to /search/q
-      const newSearch = currentParams.toString();
-      const newPath = `/search${newSearch ? '?' + newSearch : ''}`;
-      navigate(newPath);
-
-      // Optional: blur input after search
-      inputRef.current?.blur();
+    if (!inputRef.current) {
+      return;
     }
-  }
+
+    const value = inputRef.current.value.trim();
+
+    const currentUrl = new URL(window.location.href);
+    const currentParams = new URLSearchParams(currentUrl.search);
+
+    if (value) currentParams.set('q', value);
+    else currentParams.delete('q');
+
+    const newSearch = currentParams.toString();
+    const newPath = `/search${newSearch ? '?' + newSearch : ''}`;
+    navigate(newPath);
+
+  };
 
   // Handle input changes to update the state
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,14 +102,13 @@ export default function Header() {
   }, [inputRef]);
 
   return <div className={`absolute top-0 z-100 w-full flex flex-row items-center justify-around text-xl text-white gap-2 focus-within:bg-black ${isOnSearchPage ? 'bg-black' : ''} transition-[background]`}>
-    <div className={`relative flex flex-1 items-center flex-row gap-6 italic focus-within:bg-white ${isOnSearchPage ? 'bg-white' : ''} transition-[background]`}>
+    <form onSubmit={handleSearch} className={`relative flex flex-1 items-center flex-row gap-6 italic focus-within:bg-white ${isOnSearchPage ? 'bg-white' : ''} transition-[background]`}>
       <FocusableItem onClick={focusInput} onSelect={focusInput} className="flex-1 p-4 parent flex gap-6 flex-row items-center ">
 
         <SearchIcon className={` opacity-0 peer-focus:opacity-100 ${isOnSearchPage || inputValue != "" ? 'opacity-100' : 'opacity-0'}  transition-opacity`} color="black" strokeWidth={2.5} />
         <input
           value={inputValue} // Controlled input
           onChange={handleInputChange} // Update state on change
-          onKeyDown={handleSearch}
           placeholder="Search for games..."
           ref={inputRef}
           type='search'
@@ -128,7 +122,7 @@ export default function Header() {
 
       </FocusableItem>
 
-    </div>
+    </form>
     <FocusableItem className="p-4">
       <BellIcon fill="white" />
     </FocusableItem>

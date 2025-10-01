@@ -10,7 +10,6 @@ export const fetchGames = async (): Promise<GameInfo[]> => {
 
 export const searchGames = async (query: string, category: string = "all"): Promise<AllSearchGamesType> => {
   const res = await axios.post(`${API_URL}/search`, { query, category });
-  // Return the entire response data so we can check for messages
   return res.data;
 };
 

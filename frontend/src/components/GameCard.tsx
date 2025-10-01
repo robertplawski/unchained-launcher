@@ -161,7 +161,7 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
           effect="blur"
           src={cachedArtworkImageUrl}
           placeholderSrc={cachedLowResArtworkImageUrl}
-          className={`h-80 aspect-auto object-contain flex-1 transition-[scale,border] z-10 ${selected ? 'shadow-md  border-1 border-neutral-500' : ''}`}
+          className={`h-80 aspect-auto object-cover flex-1 transition-[scale,border] z-10 ${selected ? 'shadow-md  border-1 border-neutral-500' : ''}`}
         />
         <img
           src={cachedLowResImageUrl}
@@ -176,7 +176,7 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
 
   return <>
     {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
-    <FocusableItem ref={focusableItemRef} focus={index == 0} onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-80 min-w-60 w-60 `}>
+    <FocusableItem ref={focusableItemRef} onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-80 min-w-60 w-60 `}>
       <img
         src={cachedLowResImageUrl}
         className={`hidden absolute object-contain min-h-80 h-90 flex-1 transition-[scale,border,opacity] blur-lg ${selected ? 'opacity-80' : 'opacity-0'}  `}
