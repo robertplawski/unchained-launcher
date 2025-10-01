@@ -2,7 +2,6 @@ name: Build and Release
 
 on:
   push:
-    # Trigger when a tag is pushed (create a release by pushing v1.0.0 etc.)
     tags:
       - 'v*.*.*'
 
@@ -19,7 +18,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -36,7 +35,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller==5.9.0   # pin a tested version or change as needed
 
       - name: Build (runs build.py)
         run: python build.py
@@ -47,9 +45,7 @@ jobs:
       - name: Create Linux artifact (zip)
         run: |
           mkdir -p release
-          # adjust path to PyInstaller output if different
           cp -r dist/UnchainedLauncher release/UnchainedLauncher-linux || true
-          # include backend and other files if needed
           zip -r release/unchainedlauncher-linux-${{ github.ref_name }}.zip release || true
 
       - name: Upload artifact (for debugging)
@@ -70,7 +66,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -79,9 +75,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller==5.9.0
+
+      - name: Ensure npm is on PATH (diagnose)
+        run: |
+          where npm || node -v || echo "npm not found"
 
       - name: Build (runs build.py)
+        shell: bash
         run: python build.py
 
       - name: Package Windows exe
