@@ -1,0 +1,86 @@
+name: Build (Linux & Windows)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: [3.11]
+        node-version: [18.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install system packages (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgtk-3-dev libnss3 libxss1 libasound2 libatk1.0-0 libx11-6
+
+      - name: Install system packages (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install -y python --version=3.11.6
+        shell: cmd
+
+      - name: Install pip dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pyinstaller
+        # if you don't have requirements.txt, adjust to install needed packages explicitly
+
+      - name: Ensure frontend dependencies (cache)
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Run build.py (PyInstaller)
+        env:
+          PYTHONUNBUFFERED: 1
+        run: |
+          python build.py
+
+      - name: List dist output
+        if: success()
+        run: |
+          echo "Listing build outputs"
+          ls -la
+
+      - name: Upload build artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnchainedLauncher-${{ runner.os }}
+          path: |
+            dist/
+            frontend/dist
+            build/
+
