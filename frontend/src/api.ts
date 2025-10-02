@@ -1,5 +1,5 @@
 import axios from "axios";
-import { type AllSearchGamesType, type GameInfo, type LaunchRequest } from "./types";
+import { type AllSearchGamesType, type GameInfo } from "./types";
 
 export const API_URL = "/api";
 
