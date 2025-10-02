@@ -13,9 +13,10 @@ export const searchGames = async (query: string, category: string = "all"): Prom
   return res.data;
 };
 
-export const launchGame = async (gameId: number, exe?: string) => {
-  const data: LaunchRequest = exe ? { exe } : {};
-  const res = await axios.post(`${API_URL}/games/${gameId}/launch`, data);
+export const launchGame = async (gameId: number) => {
+  const res = await axios.get(
+    `${API_URL}/games/${gameId}/launch`,
+  );
   return res.data;
 };
 

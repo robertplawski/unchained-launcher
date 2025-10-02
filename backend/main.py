@@ -635,7 +635,7 @@ def search_games(request: SearchRequest):
         return result
 
 
-@app.post("/games/{game_id}/launch")
+@app.get("/games/{game_id}/launch")
 def launch_game(game_id: int):
     # Find game
     game = next((g for g in games_cache if g["id"] == game_id), None)
