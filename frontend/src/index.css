@@ -20,8 +20,8 @@ svg.lucide{
   /* Define the initial state of the box-shadow (no glow) */
   box-shadow: 0 0 0 2px transparent;
   /* Apply a smooth transition for the box-shadow property */
-  transition: all 0.3s ease-in-out;
-  
+  transition: all 0.3s ;
+  scale:1.05; 
 }
 
 

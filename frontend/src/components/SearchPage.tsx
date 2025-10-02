@@ -6,7 +6,7 @@ import FocusableItem, { type FocusableItemHandle } from './FocusableItem';
 import { useNavigation, useSearchParams } from 'react-router';
 
 import { useLoaderData } from "react-router";
-const categories: SearchResultCategory[] = ["all", "library", "bay", "peers", "apps"];
+const categories: SearchResultCategory[] = ["all", "library", "bay"];
 
 function CategoryButton({
   name,
