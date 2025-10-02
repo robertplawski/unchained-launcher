@@ -40,34 +40,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# IGDB API credentials
-IGDB_CLIENT_ID = "laerj6vf8mku8gvypqnz6te10cnnqk"
-IGDB_CLIENT_SECRET = "61ihdu0laj8zerj1r19omw25yckxnf"
 IGDB_TOKEN = None
 IGDB_TOKEN_EXPIRES = 0
-IGDB_URL = "https://api.igdb.com/v4/games"
-
-def get_igdb_token():
-    """Generate a new IGDB access token if expired or missing."""
-    global IGDB_TOKEN, IGDB_TOKEN_EXPIRES
-    now = int(time.time())
-    if IGDB_TOKEN is None or now >= IGDB_TOKEN_EXPIRES:
-        resp = requests.post(
-            "https://id.twitch.tv/oauth2/token",
-            data={
-                "client_id": IGDB_CLIENT_ID,
-                "client_secret": IGDB_CLIENT_SECRET,
-                "grant_type": "client_credentials"
-            }
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            IGDB_TOKEN = data["access_token"]
-            IGDB_TOKEN_EXPIRES = now + data["expires_in"] - 60  # refresh 1 min early
-            print(f"[IGDB] New token obtained, expires in {data['expires_in']}s")
-        else:
-            raise RuntimeError(f"Failed to get IGDB token: {resp.status_code} {resp.text}")
-    return IGDB_TOKEN
+IGDB_URL = "https://igdb-proxy.robertplawski8.workers.dev/games"
 
 def upgrade_igdb_image_resolution(url):
     """
@@ -183,10 +158,7 @@ def search_igdb_games(query: str, limit: int):
         # Return empty result when query is None for IGDB
         return {"games": [], "count": 0}
     
-    token = get_igdb_token()
     headers = {
-        "Client-ID": IGDB_CLIENT_ID,
-        "Authorization": f"Bearer {token}",
         "Accept": "application/json"
     }
     
@@ -255,10 +227,7 @@ def fetch_game_metadata(game_name: str):
     if metadata_json_path.exists():
         return json.load(open(metadata_json_path, encoding="utf-8"))
 
-    token = get_igdb_token()
     headers = {
-        "Client-ID": IGDB_CLIENT_ID,
-        "Authorization": f"Bearer {token}",
         "Accept": "application/json"
     }
 
@@ -549,10 +518,7 @@ def get_igdb_game_metadata(game_id: int):
         if g['metadata']['id'] == game_id:
             return g
     
-    token = get_igdb_token()
     headers = {
-        "Client-ID": IGDB_CLIENT_ID,
-        "Authorization": f"Bearer {token}",
         "Accept": "application/json"
     }
     
