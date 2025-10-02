@@ -404,9 +404,6 @@ class GameInfo(BaseModel):
     igdb_id: Optional[int] = None
     size:float 
 
-class LaunchRequest(BaseModel):
-    exe: Optional[str] = None
-
 class SearchRequest(BaseModel):
     query: Optional[str] = None
     category: Optional[str] = "all"  # all, library, bay, apps
@@ -636,6 +633,66 @@ def search_games(request: SearchRequest):
         result = {"games": [], "count": 0, "message": f"Unknown category: {category}"}
         result["games"] = remove_duplicates(result["games"])
         return result
+
+
+@app.post("/games/{game_id}/launch")
+def launch_game(game_id: int):
+    # Find game
+    game = next((g for g in games_cache if g["id"] == game_id), None)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    if not game["exes"]:
+        raise HTTPException(status_code=400, detail="No .exe found for this game")
+
+    # Pick executable
+    exe_to_run = game["exes"][0]
+     # -------------------- Wine prefix --------------------
+    wine_prefix = PREFIXES_DIR / game["name"]
+    wine_prefix.mkdir(exist_ok=True)
+    if not (wine_prefix / "system.reg").exists():
+        subprocess.run(
+            ["wineboot", "-i"],
+            cwd=game["path"],
+            env={**os.environ, "WINEPREFIX": str(wine_prefix)}
+        )
+
+    # -------------------- Save directory --------------------
+    game_save_dir = SAVES_DIR / game["name"]
+    game_save_dir.mkdir(exist_ok=True)
+
+    # Optional: symlink "My Games" inside save dir
+    my_games_folder = (
+        wine_prefix / "drive_c" / "users" / os.getlogin() / "My Documents" / "My Games"
+    )
+    target_folder = game_save_dir / "My Games"
+    if my_games_folder.exists() and not target_folder.exists():
+        try:
+            os.symlink(my_games_folder, target_folder)
+        except FileExistsError:
+            pass
+
+    # -------------------- Launch game --------------------
+    try:
+        env = os.environ.copy()
+        env["WINEPREFIX"] = str(wine_prefix)
+        env["GAME_SAVE_DIR"] = str(game_save_dir)
+        subprocess.Popen(
+            ["umu-run", exe_to_run],
+            cwd=game["path"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to launch: {e}")
+
+    return {
+        "message": f"Launched {game['name']} -> {exe_to_run}",
+        "wine_prefix": str(wine_prefix),
+        "save_dir": str(game_save_dir),
+        "cover_image": game.get("cover_image")
+    }
 
 app.mount("/api/metadata", StaticFiles(directory=METADATA_DIR), name="metadata")
 
