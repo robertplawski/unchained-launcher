@@ -1,4 +1,10 @@
-import sys
+import sys 
+VERSION = "0.0.19" 
+# Check for --version argument
+if "--version" in sys.argv:
+    print(f"Unchained Launcher version {VERSION}")
+    sys.exit(0)
+
 import platform
 import time
 import os
@@ -16,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # --- CONFIG ---
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "0.0.17"  
+ 
 
 window_hidden = False
 
@@ -88,10 +94,7 @@ def run_server():
 
 def main():
     global window
-    # Check for --version argument
-    if "--version" in sys.argv:
-        print(f"Unchained Launcher version {VERSION}")
-        sys.exit(0)
+
 
 
     window = webview.create_window("Unchained Launcher", BACKEND_URL)
