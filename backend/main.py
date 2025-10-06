@@ -24,7 +24,7 @@ SAVES_DIR = BASE_DIR / "saves"
 METADATA_DIR = BASE_DIR / "metadata"
 
 CACHE_DIR = BASE_DIR / "cache"
-CACHE_TTL = 300  # seconds
+CACHE_TTL = 86400 # one day in seconds
 
 import hashlib
 import json
@@ -495,7 +495,7 @@ def refresh_games():
     global games_cache
     global download_sources_cache
     games_cache = scan_games()
-    download_sources_cache = download_json("https://hydralinks.pages.dev/sources/steamrip.json", "steamrip.json")
+    download_sources_cache = download_json()
     return {"message": "Game list refreshed", "count": len(games_cache)}
 
 import requests
