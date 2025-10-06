@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 const AnimatedOutlet = ({ children }: PropsWithChildren) => {
   const location = useLocation();
   const navigation = useNavigation();
+
   const [prevChildren, setPrevChildren] = useState<React.ReactNode>(children);
   const currentChildrenRef = useRef(children);
 
@@ -14,7 +15,7 @@ const AnimatedOutlet = ({ children }: PropsWithChildren) => {
 
   // Store previous children during navigation
   useEffect(() => {
-    if (navigation.state === 'loading') {
+    if (navigation.state != 'loading') {
       // Keep previous children visible during navigation
       setPrevChildren(currentChildrenRef.current);
     } else {

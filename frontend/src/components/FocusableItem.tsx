@@ -20,11 +20,12 @@ export interface FocusableItemProps {
   onClick?: () => void;
   onSelect?: () => void;
   children?: React.ReactNode;
+  dataId?: string;
 }
 
 // Use forwardRef to accept an external ref
 const FocusableItem = forwardRef<FocusableItemHandle, FocusableItemProps>(
-  function FocusableItem({ children, onClick, onSelect, className, focus }, ref: ForwardedRef<FocusableItemHandle>) {
+  function FocusableItem({ dataId, children, onClick, onSelect, className, focus }, ref: ForwardedRef<FocusableItemHandle>) {
     const { ref: rovingFocusRef, tabIndex } = useRovingFocus<HTMLButtonElement>();
     const [isFocusedState, setIsFocusedState] = useState(false); // State to track focus internally
 
@@ -101,7 +102,7 @@ const FocusableItem = forwardRef<FocusableItemHandle, FocusableItemProps>(
     const finalClassName = `${className || ""} ${isFocusedState ? 'focusable-item-focused' : ''}`.trim();
 
     return (
-      <button onClick={onClick} ref={rovingFocusRef} tabIndex={tabIndex} className={finalClassName}>
+      <button data-id={dataId} onClick={onClick} ref={rovingFocusRef} tabIndex={tabIndex} className={finalClassName}>
         {children}
       </button>
     );

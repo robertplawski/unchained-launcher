@@ -18,15 +18,24 @@ logger = logging.getLogger(__name__)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 VERSION = "0.0.11"  
 
+window_hidden = False
+
 def create_tray_icon():
     """Create and run the system tray icon."""
-    # Try to load a custom icon; fallback to a blank image if not found
-    icon_path = os.path.join(ROOT_DIR, "icon.png")
+    icon_path = os.path.join(ROOT_DIR, "icon-alt.png")
     if os.path.exists(icon_path):
         image = Image.open(icon_path)
     else:
-        # Create a minimal blank icon (16x16 white)
-        image = Image.new('RGB', (16, 16), color='blue')
+        image = Image.new('RGB', (16, 16), color='white')
+
+    def toggle():
+        global window_hidden
+        if window_hidden:
+            window.show()
+        else:
+            window.hide()
+        window_hidden = not window_hidden
+
 
     def show_window(icon, item):
         global window
@@ -46,8 +55,7 @@ def create_tray_icon():
         os._exit(0)  # Force exit after cleanup
 
     menu = pystray.Menu(
-        pystray.MenuItem("Show", show_window),
-        pystray.MenuItem("Hide", hide_window),
+        pystray.MenuItem("Show / Hide", toggle),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", quit_app)
     )

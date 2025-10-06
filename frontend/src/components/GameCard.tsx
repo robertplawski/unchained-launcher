@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { type GameInfo } from "../types";
 import { API_URL } from "../api";
 import { LucideDownload, LucidePlay } from "lucide-react";
@@ -45,22 +45,43 @@ export function formatFileSize(mb: number): string {
 }
 
 const GameStatusInfo = ({ game }: { game: GameInfo }) => {
-  return <p className="text-lg text-neutral-400 flex flex-row gap-4 items-center">
-    {!game.installed ? <LucidePlay fontSize={"0.5rem"} fill="#00FF00" color="#00FF00" /> : <LucideDownload />}
+  return <p className="opacity-60 uppercase font-bold tracking-wider text-white flex flex-row gap-4 items-center">
+    {!game.installed ? <LucidePlay className="icon-small" fill="#FFF" color="#FFF" /> : <LucideDownload />}
     Size on disk {formatFileSize(game.size || 0)}
   </p>
 }
 
-const GameBackgroundArtwork = ({ selected, last, artworkUrl }: { selected?: boolean, last?: boolean, artworkUrl?: string }) => {
+const GameBackgroundArtwork = ({ index, last, artworkUrl }: { index?: number, focusableItemRef?: RefObject<FocusableItemHandle | null>, selected: boolean, last?: boolean, artworkUrl?: string }) => {
+
+  const [reallySelected, setReallySelected] = useState(false);
+  useEffect(() => {
+
+    const interval = setInterval(() => {
+      if (!document.activeElement?.classList.contains('game-card'))
+        return;
+      setReallySelected(document.activeElement?.getAttribute("data-id") == 'game-card-' + index);
+
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [])
+
   const { cachedImageUrl } = useImageCache(artworkUrl);
-  return <img
-    className={`max-h-[40rem] -z-100 blur-sm h-full object-cover w-full fixed top-0 left-0 ${selected || last ? 'opacity-20' : 'opacity-0'} transition-opacity`}
-    src={cachedImageUrl}
-  />
+  return <>
+
+    <img
+      className={`max-h-[40rem] -z-10 blur-xs h-full object-cover w-full absolute top-0 left-0 ${reallySelected || last ? 'opacity-40' : 'opacity-0'} transition-opacity`}
+
+
+      src={cachedImageUrl}
+    />
+
+
+  </>
 }
 
 const GameInfo = ({ game, selected }: { game: GameInfo, selected?: boolean }) => {
-  return <div className={` absolute  -bottom-24 transition-[opacity,translate] duration-300 text-nowrap ${selected ? 'translate-y-0 transition-[translate,opacity] duration-300' : 'translate-y-6'} flex flex-col p-2 gap-2 ${selected ? 'opacity-100' : 'opacity-0'}`}>
+  return <div className={` absolute  -bottom-18 transition-[opacity,translate] duration-300 text-nowrap ${selected ? 'translate-y-0 transition-[translate,opacity] duration-300' : 'translate-y-6'} flex flex-col p-2 gap-0 ${selected ? 'opacity-100' : 'opacity-0'}`}>
     <p className="text-2xl font-bold text-left">{game.name}</p>
     <GameStatusInfo game={game} />
   </div>
@@ -128,8 +149,6 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
 
   const focusableItemRef = useRef<FocusableItemHandle>(null);
 
-
-
   // Add state to track the focused state
   const [selected, setIsSelected] = useState(false);
 
@@ -146,6 +165,7 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
 
     return () => clearInterval(interval);
   }, [selected]);
+
   const openGamePage = useCallback(() => {
     navigate(`/game/` + (game.category == "library" ? (game?.metadata?.id || game.id) : game.id))
   }, [game])
@@ -153,8 +173,8 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
 
   if (big) {
     return <>
-      {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
-      <FocusableItem ref={focusableItemRef} focus={index == 0} onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 h-80 aspect-[1920/976]`}>
+      {!hideGameArtwork && <GameBackgroundArtwork {...{ index, selected, last, artworkUrl, focusableItemRef }} />}
+      <FocusableItem ref={focusableItemRef} dataId={'game-card-' + index} focus={index == 0} onClick={openGamePage} className={`game-card cursor-pointer relative flex flex-col justify-between gap-0 h-80 aspect-[1920/976]`}>
         <LazyLoadImage
 
           loading="lazy"
@@ -175,8 +195,8 @@ const GameCard: React.FC<Props> = ({ index, game, big, last, hideGameInfo, hideG
   }
 
   return <>
-    {!hideGameArtwork && <GameBackgroundArtwork {...{ selected, last, artworkUrl }} />}
-    <FocusableItem ref={focusableItemRef} onClick={openGamePage} className={`cursor-pointer relative flex flex-col justify-between gap-0 min-h-80 min-w-60 w-60 `}>
+    {!hideGameArtwork && <GameBackgroundArtwork {...{ index, selected, last, artworkUrl, focusableItemRef }} />}
+    <FocusableItem ref={focusableItemRef} dataId={'game-card-' + index} onClick={openGamePage} className={`game-card cursor-pointer relative flex flex-col justify-between gap-0 min-h-80 min-w-60 w-60 `}>
       <img
         src={cachedLowResImageUrl}
         className={`hidden absolute object-contain min-h-80 h-90 flex-1 transition-[scale,border,opacity] blur-lg ${selected ? 'opacity-80' : 'opacity-0'}  `}

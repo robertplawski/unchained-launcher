@@ -12,14 +12,21 @@ export interface GameMetadata {
 export interface LaunchRequest {
   exe?: string;
 }
-// src/types.ts
+export interface DownloadEntry {
+  title: string;
+  uploadDate: string;
+  fileSize: string;
+  uris: string[];
+}
 export interface GameInfo {
   id: number;
   name: string;
   category?: string;
   exes: string[];
   installed?: boolean;
+  downloads?: DownloadEntry[];
   size?: number;
+
   // Properties that were missing but are accessed in SearchPage.tsx
   cover?: string;
   screenshots?: string[];  // Make optional

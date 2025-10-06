@@ -15,9 +15,10 @@ const GameList: React.FC = () => {
   const navigate = useNavigate();
 
 
+
   return (
 
-    <div className="flex flex-col gap-5 min-w-[100vw] overflow-hidden p-6 px-13  pt-22">
+    <div className="flex flex-col gap-5 min-w-[100vw] min-h-[40rem] overflow-hidden p-6 px-13  pt-22">
       <h2
         className={`text-3xl font-bold transition-opacity opacity-100`}
       >

@@ -23,7 +23,9 @@ svg.lucide{
   transition: all 0.3s ;
   scale:1.05; 
 }
-
+.focusable-item-focused.noscale{
+  scale:1;
+}
 
 .focusable-item-focused:focus {
   /* Define the box-shadow when focused - this creates the animated outline */
@@ -33,4 +35,7 @@ svg.lucide{
 .focusable-item-focused.inset:focus{
 
   box-shadow: 0 0 0 2px inset white; /* Adjust color as needed */
+}
+.icon-small{
+  font-size:0.25em;
 }

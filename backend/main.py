@@ -23,7 +23,43 @@ PREFIXES_DIR = BASE_DIR / "prefixes"
 SAVES_DIR = BASE_DIR / "saves"
 METADATA_DIR = BASE_DIR / "metadata"
 
-for d in [DATA_DIR, PREFIXES_DIR, SAVES_DIR, METADATA_DIR]:
+CACHE_DIR = BASE_DIR / "cache"
+CACHE_TTL = 300  # seconds
+
+import hashlib
+import json
+from pathlib import Path
+import time
+
+def hash_key(key: str) -> str:
+    """Generate a filename-safe hash from a string"""
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+def kv_get(key: str):
+    """Get cached data from local KV if not expired"""
+    file_path = CACHE_DIR / hash_key(key)
+    if not file_path.exists():
+        return None
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            entry = json.load(f)
+        if time.time() - entry["time"] > CACHE_TTL:
+            file_path.unlink(missing_ok=True)  # expired
+            return None
+        return entry["data"]
+    except Exception:
+        return None
+
+def kv_set(key: str, data):
+    """Store data in local KV cache"""
+    file_path = CACHE_DIR / hash_key(key)
+    entry = {"time": time.time(), "data": data}
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(entry, f)
+
+
+
+for d in [DATA_DIR, PREFIXES_DIR, SAVES_DIR, METADATA_DIR,CACHE_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Game Launcher API")
@@ -43,6 +79,50 @@ app.add_middleware(
 IGDB_TOKEN = None
 IGDB_TOKEN_EXPIRES = 0
 IGDB_URL = "https://igdb-proxy.robertplawski8.workers.dev/games"
+
+
+def download_json(url: str, filename: str):
+    filepath = os.path.join(METADATA_DIR, filename)
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # raise error if request failed
+        data = response.json()  # parse JSON
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+        print(f"JSON downloaded and saved to {filepath}")
+        return data
+    except requests.RequestException as e:
+        print(f"Error downloading JSON: {e}")
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+
+from difflib import SequenceMatcher
+from rapidfuzz import fuzz
+
+import re
+
+
+def find_download_best_match(name: str):
+    global download_sources_cache
+    matches = []
+
+    tokens = name.lower().split()
+    for download in download_sources_cache.get("downloads", []):
+        title = download.get("title", "").lower()
+        match_count = sum(1 for token in tokens if re.search(re.escape(token), title))
+        if match_count > 0:
+            matches.append((match_count, download))
+
+    # Sort matches by number of tokens matched (descending)
+    matches.sort(key=lambda x: x[0], reverse=True)
+
+    # Return top 3 matches
+    top_matches = [download for _, download in matches[:3]]
+    return top_matches if top_matches else None
+
 
 def upgrade_igdb_image_resolution(url):
     """
@@ -118,7 +198,8 @@ def process_game_metadata(game_data):
             if match:
                 steam_id = match.group(1)
                 break
-    
+
+
     return {
         "id": game_data.get("id"),
         "name": game_data.get("name"),
@@ -132,7 +213,8 @@ def process_game_metadata(game_data):
         "screenshots": screenshots,
         "artworks": artworks,
         "category":"bay",
-        "steam_id": steam_id
+        "steam_id": steam_id,
+        "downloads": find_download_best_match(game_data.get('name'))
     }
 
 def search_library_games(query: str, limit: int):
@@ -153,61 +235,44 @@ def search_library_games(query: str, limit: int):
     return {"games": matching_games[:limit], "count": len(matching_games)}
 
 def search_igdb_games(query: str, limit: int):
-    """Search for games using IGDB API"""
     if query is None:
-        # Return empty result when query is None for IGDB
         return {"games": [], "count": 0}
-    
-    headers = {
-        "Accept": "application/json"
-    }
-    
-    # Escape quotes in query to prevent broken query
-    import re
-    safe_query = re.sub(r'"', '', query)
-    
-    fields = "id,name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
 
-    # filter for pc games only (platform id 6 = pc) and main games only (category 0 = main game)
+    # Check KV cache first
+    cached = kv_get(query)
+    if cached:
+        return cached
+
+    headers = {"Accept": "application/json"}
+    safe_query = re.sub(r'"', '', query)
+    fields = "id,name,cover.url,genres.name,platforms.name,first_release_date,summary,screenshots.url,artworks.url,websites.url,rating,total_rating"
     query_igdb = (
         f'fields {fields}; '
         f'search "{safe_query}*"; '
-        # remember to change these platforms in order to support emulation
         f'where platforms = (6) &  game_type = (0,4,8,9,10,11,12); '
-
         f'limit 100;'
     )
 
     resp = requests.post(IGDB_URL, headers=headers, data=query_igdb)
-    if resp.status_code == 401:  # token expired
+    if resp.status_code == 401:
         token = get_igdb_token()
         headers["Authorization"] = f"Bearer {token}"
         resp = requests.post(IGDB_URL, headers=headers, data=query_igdb)
-    
+
     if resp.status_code != 200:
         raise HTTPException(status_code=resp.status_code, detail=f"IGDB API error: {resp.text}")
-    
-    import difflib
-    games = resp.json()
-    for g in games:
-        g['category'] = 'bay'
-    games = [g for g in games if 'rating' in g and g['rating'] is not None]
- 
 
-   
-    games = sorted(
-        games,
-        key=lambda g: difflib.SequenceMatcher(None, g.get('name', ''), safe_query).ratio(),
-        reverse=True
-    )
-    
-    # Process the games to match our metadata format
-    processed_games = []
-    for game in games:
-        processed_game = process_game_metadata(game)
-        processed_games.append(processed_game)
-        
-    return {"games": processed_games, "count": len(processed_games)}
+    games = resp.json()
+    games = [g for g in games if 'rating' in g and g['rating'] is not None]
+
+    # Process only metadata (do NOT download images here)
+    processed_games = [process_game_metadata(g) for g in games]
+    result = {"games": processed_games[:limit], "count": len(processed_games)}
+
+    # Save to KV cache
+    kv_set(query, result)
+
+    return result
 
 def fetch_game_metadata(game_name: str):
     game_metadata_dir = METADATA_DIR / game_name
@@ -378,9 +443,18 @@ def scan_games():
     return games
 
 games_cache = scan_games()
-
+download_sources_cache = {} #download_json() 
+                        
 # -------------------- Models --------------------
 from typing import Literal
+from pydantic import HttpUrl
+from datetime import datetime
+
+class DownloadEntry(BaseModel):
+    title: str
+    uploadDate: datetime
+    fileSize: str
+    uris: List[HttpUrl]
 
 class GameMetadata(BaseModel):
     id: Optional[int] = None
@@ -393,6 +467,7 @@ class GameMetadata(BaseModel):
     first_release_date: Optional[int]
     summary: Optional[str]
     steam_id: Optional[str]
+    downloads: Optional[List[DownloadEntry]] = None
 
 class GameInfo(BaseModel):
     id: int
@@ -418,7 +493,9 @@ def list_games():
 @app.post("/api/refresh")
 def refresh_games():
     global games_cache
+    global download_sources_cache
     games_cache = scan_games()
+    download_sources_cache = download_json("https://hydralinks.pages.dev/sources/steamrip.json", "steamrip.json")
     return {"message": "Game list refreshed", "count": len(games_cache)}
 
 import requests
@@ -537,7 +614,7 @@ def get_igdb_game_metadata(game_id: int):
     
 
     game = games[0]
-  
+ 
             #game['installed'] = True
 
     return process_game_metadata(game)
@@ -598,7 +675,7 @@ def search_games(request: SearchRequest):
         # Search all categories and return combined results with counts
         library_results = search_library_games(query, limit)
         igdb_results = search_igdb_games(query, limit)
-        apps_results = search_flatpak_apps(query, limit)
+        apps_results = {"games":[],"count":0}#search_flatpak_apps(query, limit)
         peers_results = {"games": [], "count": 0}  # Placeholder
 
         # Combine all results

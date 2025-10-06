@@ -1,18 +1,27 @@
-import { BellIcon, GlobeIcon, SearchIcon, SettingsIcon, XCircleIcon } from "lucide-react"
+import { BellIcon, GlobeIcon, SearchIcon, SettingsIcon } from "lucide-react"
 import Clock from "./Clock"
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import FocusableItem from "./FocusableItem";
 
-
-
-
 export default function Header() {
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
   const isOnSearchPage = location.pathname === '/search';
+
+  const [scrolled, setIsScrolled] = useState(false);
+
+  // Detect scroll to "lift" header
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Get current query from URL and use it as input value
   const [query, setQuery] = useState('');
@@ -88,24 +97,16 @@ export default function Header() {
     //navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
-
-  const clearInput = () => {
-    if (inputRef.current) {
-      setInputValue("")
-    }
-  }
-
   const focusInput = useCallback(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, [inputRef]);
 
-  return <div className={`absolute top-0 z-100 w-full flex flex-row items-center justify-around text-xl text-white gap-2 focus-within:bg-black ${isOnSearchPage ? 'bg-black' : ''} transition-[background]`}>
-    <form onSubmit={handleSearch} className={`relative flex flex-1 items-center flex-row gap-6 italic focus-within:bg-white ${isOnSearchPage ? 'bg-white' : ''} transition-[background]`}>
-      <FocusableItem onClick={focusInput} onSelect={focusInput} className="flex-1 p-4 parent flex gap-6 flex-row items-center ">
-
-        <SearchIcon className={` opacity-0 peer-focus:opacity-100 ${isOnSearchPage || inputValue != "" ? 'opacity-100' : 'opacity-0'}  transition-opacity`} color="black" strokeWidth={2.5} />
+  return <div className={`absolute top-0 z-100 w-full flex flex-row items-center justify-around text-xl text-white gap-2 focus-within:bg-black ${isOnSearchPage ? 'bg-black' : ''} ${scrolled ? 'backdrop-blur-3xl' : ''} transition-[background]`}>
+    <form onSubmit={handleSearch} className={`flex flex-1 items-center flex-row gap-6 italic focus-within:bg-white ${isOnSearchPage ? 'bg-white' : ''} transition-[background]`}>
+      <FocusableItem onClick={focusInput} onSelect={focusInput} className="noscale relative pl-12 flex-1 p-4 parent flex gap-6 flex-row items-center ">
+        <SearchIcon className={`left-0 mx-4 absolute opacity-100 peer-focus:opacity-0 transition-opacity`} color="#000" strokeWidth={2.5} />
         <input
           value={inputValue} // Controlled input
           onChange={handleInputChange} // Update state on change
@@ -114,14 +115,9 @@ export default function Header() {
           type='search'
           className={`flex-1 text-black peer outline-none appearance-none focus:opacity-100 ${isOnSearchPage || inputValue != "" ? 'opacity-100' : 'opacity-0'} transition-[opacity]`}
         />
-        <XCircleIcon scale={2} color="#000" onClick={clearInput} className={`absolute right-3 ${inputValue != "" ? ' opacity-100' : "opacity-0 "}  transition-opacity cursor-pointer`} strokeWidth={2.5} />
-
-
-        <SearchIcon onClick={focusInput} className={`peer-focus:opacity-100 opacity-0 transition-opacity cursor-pointer`} strokeWidth={2.5} />
-
+        <SearchIcon onClick={focusInput} className={`mx-4 right-0 absolute opacity-100 peer-focus:opacity-0 transition-opacity cursor-pointer`} strokeWidth={2.5} />
 
       </FocusableItem>
-
     </form>
     <FocusableItem className="p-4">
       <BellIcon fill="white" />
@@ -136,7 +132,6 @@ export default function Header() {
       <Clock />
     </FocusableItem>
     <FocusableItem className="p-3">
-
       <div className="flex items-center justify-center font-bold bg-neutral-700 border-blue-500 border-r-4 w-auto aspect-[1/1] h-8">
         ?
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useLoaderData } from 'react-router-dom';
 import type { GameInfo } from '../types';
 import { ChevronDown, LucideDownload, LucidePlay } from 'lucide-react';
@@ -11,6 +11,10 @@ const InstallButton = ({ installed, game }: { installed?: boolean, game: GameInf
 
   const { id } = game
 
+  const installGame = useCallback(() => {
+    alert(JSON.stringify(game.downloads))
+  }, [game])
+
   useEffect(() => {
 
     if (!focusableItemRef.current) {
@@ -22,23 +26,15 @@ const InstallButton = ({ installed, game }: { installed?: boolean, game: GameInf
   return <div className='flex flex-col gap-2 max-w-[16rem]'>
     <div className='flex flex-row'>
       {!installed ?
-        <FocusableItem className='inset px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-blue-500' ref={focusableItemRef}>
-
+        <FocusableItem onClick={() => installGame()} className='inset px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-blue-500' ref={focusableItemRef}>
           <LucideDownload strokeWidth={3} />
           Install
-
-
         </FocusableItem>
         :
-
         <FocusableItem onClick={() => launchGame(id)} ref={focusableItemRef} className='inset px-5 rounded-r-none cursor-pointer py-4 rounded-sm w-56 font-bold flex flex-row items-center gap-4 bg-green-500'>
-
-
           <LucidePlay fill="white" strokeWidth={3} />
           Play
-
         </FocusableItem>
-
       }
       <FocusableItem className='inset cursor-pointer px-2 py-3 rounded-l-none rounded-sm font-bold flex flex-row items-center gap-4 bg-neutral-600'>
         <ChevronDown fill="white" />
