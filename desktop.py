@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # --- CONFIG ---
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "0.0.11"  
+VERSION = "0.0.17"  
 
 window_hidden = False
 
