@@ -127,7 +127,6 @@ pyudev==0.24.3
 pywebview==6.0
 pyxdg==0.27
 PyYAML==6.0.2
-pyynl @ file:///builddir/build/BUILD/kernel-6.16.7-build/kernel-6.16.7/linux-6.16.7-200.fc42.x86_64/tools/net/ynl
 pyzstd==0.16.2
 referencing==0.36.2
 rencode==1.0.6
@@ -138,9 +137,7 @@ rpm==4.20.1
 rpmautospec==0.8.1
 rpmautospec-core==0.1.5
 SecretStorage==3.3.3
-selinux @ file:///builddir/build/BUILD/libselinux-3.8-build/libselinux-3.8/src
 sentry-sdk==2.21.0
-sepolicy @ file:///builddir/build/BUILD/policycoreutils-3.8-build/selinux-3.8/python/sepolicy
 setools==4.5.1
 setuptools==74.1.3
 shtab==1.7.1
